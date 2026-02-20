@@ -13,16 +13,17 @@ class BluetoothHidServiceUseCase(
     private val dataStoreRepository: DataStoreRepository
 ) {
 
-    fun startHidProfile() {
-        val autoConnectDeviceAddress: String
-        runBlocking {
-            autoConnectDeviceAddress = dataStoreRepository.getAutoConnectDeviceAddressFlow().first()
-        }
+    suspend fun startHidProfile() {
+        val autoConnectDeviceAddress: String = dataStoreRepository.getAutoConnectDeviceAddressFlow().first()
         bluetoothRepository.startHidProfile(autoConnectDeviceAddress)
     }
 
     fun stopHidProfile() {
         bluetoothRepository.stopHidProfile()
+    }
+
+    fun isBluetoothServiceRunning(): StateFlow<Boolean> {
+        return bluetoothRepository.isBluetoothServiceRunning()
     }
 
     fun disconnectDevice(): Boolean {

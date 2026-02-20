@@ -12,12 +12,22 @@ import com.atharok.btremote.common.extensions.parcelable
 import com.atharok.btremote.common.utils.checkBluetoothConnectPermission
 import com.atharok.btremote.common.utils.checkBluetoothScanPermission
 import com.atharok.btremote.domain.entities.DeviceEntity
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 class BluetoothScanner(
     private val context: Context,
     private val adapter: BluetoothAdapter?
 ) {
+    private val _scannedDevicesState = MutableStateFlow<List<DeviceEntity>>(emptyList())
+    val scannedDevicesState: StateFlow<List<DeviceEntity>> = _scannedDevicesState.asStateFlow()
+
+    @Deprecated("Use scannedDevicesState instead for better architectural separation", ReplaceWith("scannedDevicesState"))
     val scannedDevices = mutableStateListOf<DeviceEntity>()
+
+    private val scannedAddresses = HashSet<String>()
 
     // ---- BroadcastReceiver ----
 
@@ -27,14 +37,16 @@ class BluetoothScanner(
                 BluetoothDevice.ACTION_FOUND -> {
                     intent.parcelable(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)?.let { device: BluetoothDevice ->
                         if(checkBluetoothConnectPermission(this@BluetoothScanner.context)) {
-                            if(!scannedDevices.any { it.macAddress == device.address }) {
-                                scannedDevices.add(
-                                    DeviceEntity(
-                                        name = device.name ?: "null",
-                                        macAddress = device.address ?: "null",
-                                        category = device.bluetoothClass.majorDeviceClass
-                                    )
+                            val address = device.address ?: return@let
+                            if(scannedAddresses.add(address)) {
+                                val entity = DeviceEntity(
+                                    name = device.name ?: "null",
+                                    macAddress = address,
+                                    category = device.bluetoothClass.majorDeviceClass
                                 )
+                                _scannedDevicesState.update { it + entity }
+                                // Keep legacy support for now
+                                scannedDevices.add(entity)
                             }
                         }
                     }
@@ -56,8 +68,15 @@ class BluetoothScanner(
         }
     }
 
+    fun clearScannedDevices() {
+        scannedAddresses.clear()
+        _scannedDevicesState.value = emptyList()
+        scannedDevices.clear()
+    }
+
     fun startDiscoveryDevices(): Boolean {
         return if (checkBluetoothScanPermission(context)) {
+            clearScannedDevices()
             adapter?.startDiscovery() == true
         } else false
     }

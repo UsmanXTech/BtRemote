@@ -36,6 +36,7 @@ fun RemoteDirectionalPadNavigation(
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     useEnterForSelection: Boolean,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     elevation: Dp = surfaceElevationMedium()
 ) {
     val upButtonProperties = RemoteButtonProperties.MenuUpButton
@@ -59,6 +60,7 @@ fun RemoteDirectionalPadNavigation(
             RemoteEmptySurfaceButton(
                 properties = upButtonProperties,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.fillMaxSize(),
                 shape = TopArcShape,
                 elevation = elevation,
@@ -69,6 +71,7 @@ fun RemoteDirectionalPadNavigation(
             RemoteEmptySurfaceButton(
                 properties = downButtonProperties,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.fillMaxSize(),
                 shape = BottomArcShape,
                 elevation = elevation,
@@ -79,6 +82,7 @@ fun RemoteDirectionalPadNavigation(
             RemoteEmptySurfaceButton(
                 properties = leftButtonProperties,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.fillMaxSize(),
                 shape = LeftArcShape,
                 elevation = elevation,
@@ -89,6 +93,7 @@ fun RemoteDirectionalPadNavigation(
             RemoteEmptySurfaceButton(
                 properties = rightButtonProperties,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.fillMaxSize(),
                 shape = RightArcShape,
                 elevation = elevation,
@@ -100,6 +105,7 @@ fun RemoteDirectionalPadNavigation(
                 RemoteEmptySurfaceButton(
                     properties = RemoteButtonProperties.KeyboardEnterButton,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.fillMaxSize(1f / 3f),
                     shape = CircleShape,
                     elevation = elevation,
@@ -109,6 +115,7 @@ fun RemoteDirectionalPadNavigation(
                 RemoteEmptySurfaceButton(
                     properties = pickButtonProperties,
                     sendKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.fillMaxSize(1f / 3f),
                     shape = CircleShape,
                     elevation = elevation,

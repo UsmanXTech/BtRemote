@@ -21,10 +21,26 @@ fun TopBar(
     actions: @Composable RowScope.() -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
+    TopBar(
+        title = { TextLarge(text = title) },
+        modifier = modifier,
+        navigateUp = navigateUp,
+        actions = actions,
+        scrollBehavior = scrollBehavior
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TopBar(
+    title: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    navigateUp: @Composable () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
+    scrollBehavior: TopAppBarScrollBehavior? = null
+) {
     TopAppBar(
-        title = {
-            TextLarge(text = title)
-        },
+        title = title,
         modifier = modifier,
         navigationIcon = navigateUp,
         actions = actions,

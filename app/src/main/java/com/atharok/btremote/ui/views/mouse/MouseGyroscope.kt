@@ -13,6 +13,7 @@ private const val OFFSET = 10
 @Composable
 fun MouseGyroscope(
     mouseSpeed: Float,
+    gyroscopeSensitivity: Float,
     onMousePositionChange: (Float, Float) -> Unit,
     gyroscopeSensorViewModel: GyroscopeSensorViewModel = koinViewModel()
 ) {
@@ -30,7 +31,8 @@ fun MouseGyroscope(
         val (dx, dy) = calculateMouseDirection(
             x, y, z,
             gyroscopeSensorViewModel.getDisplayRotation(),
-            mouseSpeed
+            mouseSpeed,
+            gyroscopeSensitivity
         )
         onMousePositionChange(dx, dy)
     }
@@ -39,9 +41,10 @@ fun MouseGyroscope(
 private fun calculateMouseDirection(
     x: Float, y: Float, z: Float,
     rotation: Int,
-    speed: Float
+    speed: Float,
+    sensitivity: Float
 ): Pair<Float, Float> {
-    val factor: Float = OFFSET * speed * -1
+    val factor: Float = OFFSET * speed * sensitivity * -1
     return when (rotation) {
         Surface.ROTATION_0 -> z * factor to x * factor
         Surface.ROTATION_180 -> z * factor to x * factor * -1

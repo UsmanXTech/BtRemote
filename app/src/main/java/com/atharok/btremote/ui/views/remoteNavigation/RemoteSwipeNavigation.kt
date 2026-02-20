@@ -48,6 +48,7 @@ fun RemoteSwipeNavigation(
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     useEnterForSelection: Boolean,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RoundedCornerShape(dimensionResource(id = R.dimen.card_corner_radius))
 ) {
     val haptic = LocalHapticFeedback.current
@@ -70,19 +71,19 @@ fun RemoteSwipeNavigation(
             }
             SwipeAction.UP -> {
                 sendRemoteKeyReport(RemoteButtonProperties.MenuUpButton.input)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
             SwipeAction.LEFT -> {
                 sendRemoteKeyReport(RemoteButtonProperties.MenuLeftButton.input)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
             SwipeAction.RIGHT -> {
                 sendRemoteKeyReport(RemoteButtonProperties.MenuRightButton.input)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
             SwipeAction.DOWN -> {
                 sendRemoteKeyReport(RemoteButtonProperties.MenuDownButton.input)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
             SwipeAction.PICK -> {
                 if(useEnterForSelection) {
@@ -90,7 +91,7 @@ fun RemoteSwipeNavigation(
                 } else {
                     sendRemoteKeyReport(RemoteButtonProperties.MenuPickButton.input)
                 }
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (hapticFeedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 action = SwipeAction.PICK_RELEASE
             }
         }

@@ -42,30 +42,40 @@ import org.koin.android.ext.android.inject
 class BluetoothHidService : Service() {
     private val useCase: BluetoothHidServiceUseCase by inject()
     private lateinit var notificationManager: NotificationManager
-    private var job: Job? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var currentConnectionState = STATE_DISCONNECTED
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
 
-        job = CoroutineScope(Dispatchers.Main).launch {
+        serviceScope.launch {
+            useCase.isBluetoothServiceRunning().collect {
+                if(!it) stopSelf()
+            }
+        }
+
+        serviceScope.launch {
             useCase.getDeviceHidConnectionState().collect {
+                var stateChanged = false
                 when(it.state) {
                     STATE_CONNECTED -> {
                         if(currentConnectionState != STATE_CONNECTED) {
                             updateNotificationForConnectedState(it.deviceName)
                             currentConnectionState = STATE_CONNECTED
+                            stateChanged = true
                         }
-                        MediaControlWidget().updateAll(this@BluetoothHidService)
                     }
                     STATE_DISCONNECTED -> {
                         if(currentConnectionState != STATE_DISCONNECTED) {
                             updateNotificationForDisconnectedState()
                             currentConnectionState = STATE_DISCONNECTED
+                            stateChanged = true
                         }
-                        MediaControlWidget().updateAll(this@BluetoothHidService)
                     }
+                }
+                if (stateChanged) {
+                    MediaControlWidget().updateAll(this@BluetoothHidService)
                 }
             }
         }
@@ -73,6 +83,7 @@ class BluetoothHidService : Service() {
 
     override fun onDestroy() {
         stopBluetoothHidProfile()
+        serviceScope.cancel()
         super.onDestroy()
     }
 
@@ -86,7 +97,9 @@ class BluetoothHidService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
             startForeground(NOTIFICATION_ID, createNotification())
-            startBluetoothHidProfile()
+            serviceScope.launch {
+                startBluetoothHidProfile()
+            }
         } catch (exception: Exception) {
             stopSelf()
         }
@@ -195,13 +208,11 @@ class BluetoothHidService : Service() {
 
     // ---- Bluetooth HID Profile ----
 
-    private fun startBluetoothHidProfile() {
+    private suspend fun startBluetoothHidProfile() {
         useCase.startHidProfile()
     }
 
     private fun stopBluetoothHidProfile() {
-        job?.cancel()
-        job = null
         useCase.stopHidProfile()
     }
 

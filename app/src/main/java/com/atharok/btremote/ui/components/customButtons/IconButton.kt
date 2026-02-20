@@ -29,6 +29,7 @@ fun IconSurfaceButton(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     elevation: Dp = surfaceElevationMedium(),
     shadowElevation: Dp = surfaceElevationShadow(),
@@ -40,6 +41,7 @@ fun IconSurfaceButton(
         touchDown = touchDown,
         touchUp = touchUp,
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape,
         elevation = elevation,
         shadowElevation = shadowElevation
@@ -58,6 +60,7 @@ fun RemoteIconSurfaceButton(
     properties: RemoteButtonProperties,
     sendKeyReport: (ByteArray) -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     elevation: Dp = surfaceElevationMedium(),
     shadowElevation: Dp = surfaceElevationShadow(),
@@ -71,6 +74,7 @@ fun RemoteIconSurfaceButton(
         touchDown = { sendKeyReport(properties.input) },
         touchUp = { sendKeyReport(REMOTE_INPUT_NONE) },
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape,
         elevation = elevation,
         shadowElevation = shadowElevation,
@@ -89,6 +93,7 @@ fun IconRawButton(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     @FloatRange(from = 0.0, to = 1.0) iconFillFraction: Float = 0.5f,
     iconPadding: Dp = 0.dp,
@@ -98,6 +103,7 @@ fun IconRawButton(
         touchDown = touchDown,
         touchUp = touchUp,
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape
     ) {
         Icon(
@@ -114,6 +120,7 @@ fun RemoteIconRawButton(
     properties: RemoteButtonProperties,
     sendKeyReport: (ByteArray) -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     @FloatRange(from = 0.0, to = 1.0) iconFillFraction: Float = 0.5f,
     iconTint: Color = LocalContentColor.current
@@ -124,6 +131,7 @@ fun RemoteIconRawButton(
         touchDown = { sendKeyReport(properties.input) },
         touchUp = { sendKeyReport(REMOTE_INPUT_NONE) },
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape,
         iconFillFraction = iconFillFraction,
         iconTint = iconTint

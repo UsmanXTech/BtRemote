@@ -21,6 +21,7 @@ fun VerticalButtonsLayout(
     bottomButtonProperties: RemoteButtonProperties,
     sendRemoteKeyReport: (ByteArray) -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     elevation: Dp = surfaceElevationMedium()
 ) {
@@ -37,6 +38,7 @@ fun VerticalButtonsLayout(
             RemoteIconRawButton(
                 properties = topButtonProperties,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier
                     .aspectRatio(1f)
                     .weight(
@@ -49,6 +51,7 @@ fun VerticalButtonsLayout(
             RemoteIconRawButton(
                 properties = bottomButtonProperties,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier
                     .aspectRatio(1f)
                     .weight(

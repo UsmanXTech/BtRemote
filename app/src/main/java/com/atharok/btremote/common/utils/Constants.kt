@@ -23,6 +23,7 @@ const val DEFAULT_USE_FULL_SCREEN: Boolean = false
 const val DEFAULT_MOUSE_SPEED: Float = 1.5f
 const val DEFAULT_SHOULD_INVERT_MOUSE_SCROLLING_DIRECTION: Boolean = false
 const val DEFAULT_USE_GYROSCOPE: Boolean = false
+const val DEFAULT_GYROSCOPE_SENSITIVITY: Float = 1.0f
 
 // ---- Keyboard ----
 val DEFAULT_KEYBOARD_LANGUAGE: KeyboardLanguage = KeyboardLanguage.ENGLISH_US
@@ -34,8 +35,9 @@ const val DEFAULT_USE_ADVANCED_KEYBOARD_INTEGRATED: Boolean = false
 val DEFAULT_REMOTE_NAVIGATION: RemoteNavigationEntity = RemoteNavigationEntity.D_PAD
 const val DEFAULT_USE_MINIMALIST_REMOTE: Boolean = false
 const val DEFAULT_USE_ENTER_FOR_SELECTION: Boolean = false
+const val DEFAULT_HAPTIC_FEEDBACK: Boolean = true
 
-const val DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS = 25L
+const val DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS = 15L
 
 const val USE_MOUSE_NAVIGATION_BY_DEFAULT = false
 

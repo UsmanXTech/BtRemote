@@ -51,6 +51,10 @@ class DataStoreRepositoryImpl(
         settingsDataStore.saveUseGyroscope(useGyroscope)
     }
 
+    override suspend fun saveGyroscopeSensitivity(sensitivity: Float) {
+        settingsDataStore.saveGyroscopeSensitivity(sensitivity)
+    }
+
     override suspend fun saveKeyboardLanguage(language: KeyboardLanguage) {
         settingsDataStore.saveKeyboardLanguage(language)
     }
@@ -81,6 +85,10 @@ class DataStoreRepositoryImpl(
 
     override suspend fun saveUseMouseNavigationByDefault(useMouseNavigationByDefault: Boolean) {
         settingsDataStore.saveUseMouseNavigationByDefault(useMouseNavigationByDefault)
+    }
+
+    override suspend fun saveHapticFeedback(hapticFeedback: Boolean) {
+        settingsDataStore.saveHapticFeedback(hapticFeedback)
     }
 
     // ---- Others ----

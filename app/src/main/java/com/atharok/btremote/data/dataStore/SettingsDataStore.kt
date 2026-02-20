@@ -45,6 +45,7 @@ class SettingsDataStore(private val context: Context) {
         private const val MOUSE_SPEED_KEY = "mouse_speed_key"
         private const val INVERT_MOUSE_SCROLLING_DIRECTION_KEY = "invert_mouse_scrolling_direction_key"
         private const val USE_GYROSCOPE_KEY = "use_gyroscope_key"
+        private const val GYROSCOPE_SENSITIVITY_KEY = "gyroscope_sensitivity_key"
         private const val KEYBOARD_LANGUAGE = "keyboard_language"
         private const val MUST_CLEAR_INPUT_FIELD_KEY = "must_clear_input_field_key"
         private const val USE_ADVANCED_KEYBOARD_KEY = "use_advanced_keyboard_key"
@@ -52,6 +53,7 @@ class SettingsDataStore(private val context: Context) {
         private const val USE_MINIMALIST_REMOTE_KEY = "use_minimalist_remote_key"
         private const val REMOTE_NAVIGATION_KEY = "remote_navigation_key"
         private const val USE_ENTER_FOR_SELECTION_KEY = "use_enter_for_selection_key"
+        private const val HAPTIC_FEEDBACK_KEY = "haptic_feedback_key"
 
         private const val FAVORITE_DEVICES_KEY = "favorite_devices_key"
         private const val AUTO_CONNECT_DEVICE_ADDRESS_KEY = "auto_connect_device_address_key"
@@ -67,6 +69,7 @@ class SettingsDataStore(private val context: Context) {
     private val mouseSpeedKey = floatPreferencesKey(MOUSE_SPEED_KEY)
     private val invertMouseScrollingDirectionKey = booleanPreferencesKey(INVERT_MOUSE_SCROLLING_DIRECTION_KEY)
     private val useGyroscopeKey = booleanPreferencesKey(USE_GYROSCOPE_KEY)
+    private val gyroscopeSensitivityKey = floatPreferencesKey(GYROSCOPE_SENSITIVITY_KEY)
     private val keyboardLanguageKey = stringPreferencesKey(KEYBOARD_LANGUAGE)
     private val mustClearInputFieldKey = booleanPreferencesKey(MUST_CLEAR_INPUT_FIELD_KEY)
     private val useAdvancedKeyboardKey = booleanPreferencesKey(USE_ADVANCED_KEYBOARD_KEY)
@@ -74,6 +77,7 @@ class SettingsDataStore(private val context: Context) {
     private val useMinimalistRemoteKey = booleanPreferencesKey(USE_MINIMALIST_REMOTE_KEY)
     private val remoteNavigationKey = stringPreferencesKey(REMOTE_NAVIGATION_KEY)
     private val useEnterForSelectionKey = booleanPreferencesKey(USE_ENTER_FOR_SELECTION_KEY)
+    private val hapticFeedbackKey = booleanPreferencesKey(HAPTIC_FEEDBACK_KEY)
     private val favoriteDevicesKey = stringPreferencesKey(FAVORITE_DEVICES_KEY)
     private val autoConnectDeviceAddressKey = stringPreferencesKey(AUTO_CONNECT_DEVICE_ADDRESS_KEY)
     private val hideBluetoothActivationButtonKey = booleanPreferencesKey(HIDE_BLUETOOTH_ACTIVATION_BUTTON_KEY)
@@ -139,6 +143,7 @@ class SettingsDataStore(private val context: Context) {
                 mouseSpeed = preferences[mouseSpeedKey] ?: DEFAULT_MOUSE_SPEED,
                 shouldInvertMouseScrollingDirection = preferences[invertMouseScrollingDirectionKey] ?: DEFAULT_SHOULD_INVERT_MOUSE_SCROLLING_DIRECTION,
                 useGyroscope = preferences[useGyroscopeKey] ?: DEFAULT_USE_GYROSCOPE,
+                gyroscopeSensitivity = preferences[gyroscopeSensitivityKey] ?: DEFAULT_GYROSCOPE_SENSITIVITY,
 
                 // ---- Keyboard ----
                 keyboardLanguage = try {
@@ -158,7 +163,8 @@ class SettingsDataStore(private val context: Context) {
                 },
                 useMinimalistRemote = preferences[useMinimalistRemoteKey] ?: DEFAULT_USE_MINIMALIST_REMOTE,
                 useEnterForSelection = preferences[useEnterForSelectionKey] ?: DEFAULT_USE_ENTER_FOR_SELECTION,
-                useMouseNavigationByDefault = preferences[useMouseNavigationByDefaultKey] ?: USE_MOUSE_NAVIGATION_BY_DEFAULT
+                useMouseNavigationByDefault = preferences[useMouseNavigationByDefaultKey] ?: USE_MOUSE_NAVIGATION_BY_DEFAULT,
+                hapticFeedback = preferences[hapticFeedbackKey] ?: DEFAULT_HAPTIC_FEEDBACK
             )
         }
 
@@ -179,6 +185,12 @@ class SettingsDataStore(private val context: Context) {
     suspend fun saveUseGyroscope(useGyroscope: Boolean) {
         context.dataStore.edit {
             it[useGyroscopeKey] = useGyroscope
+        }
+    }
+
+    suspend fun saveGyroscopeSensitivity(sensitivity: Float) {
+        context.dataStore.edit {
+            it[gyroscopeSensitivityKey] = sensitivity
         }
     }
 
@@ -231,6 +243,12 @@ class SettingsDataStore(private val context: Context) {
     suspend fun saveUseMouseNavigationByDefault(useMouseNavigationByDefault: Boolean) {
         context.dataStore.edit {
             it[useMouseNavigationByDefaultKey] = useMouseNavigationByDefault
+        }
+    }
+
+    suspend fun saveHapticFeedback(hapticFeedback: Boolean) {
+        context.dataStore.edit {
+            it[hapticFeedbackKey] = hapticFeedback
         }
     }
 

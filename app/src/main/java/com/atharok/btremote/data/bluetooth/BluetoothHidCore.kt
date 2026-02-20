@@ -71,7 +71,12 @@ class BluetoothHidCore(
             _isBluetoothServiceRunning.value = true
         }
 
-        override fun onServiceDisconnected(i: Int) {}
+        override fun onServiceDisconnected(i: Int) {
+            if(i == BluetoothProfile.HID_DEVICE) {
+                _isBluetoothServiceRunning.value = false
+                _isBluetoothHidProfileRegistered.value = false
+            }
+        }
     }
 
     // ---- BluetoothHidDevice.Callback implementation ----
@@ -90,6 +95,11 @@ class BluetoothHidCore(
             super.onConnectionStateChanged(device, state)
             if (checkBluetoothConnectPermission(context)) {
                 _deviceHidConnectionState.value = DeviceHidConnectionState(state, device?.name ?: "")
+                if (state == BluetoothProfile.STATE_DISCONNECTED) {
+                    bluetoothDevice = null
+                } else if (state == BluetoothProfile.STATE_CONNECTED) {
+                    bluetoothDevice = device
+                }
             }
         }
     }

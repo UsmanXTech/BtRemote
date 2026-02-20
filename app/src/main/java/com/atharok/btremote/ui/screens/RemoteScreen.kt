@@ -54,6 +54,7 @@ import com.atharok.btremote.ui.components.BasicIconButton
 import com.atharok.btremote.ui.components.FadeAnimatedContent
 import com.atharok.btremote.ui.components.LoadingDialog
 import com.atharok.btremote.ui.components.MoreOverflowMenu
+import com.atharok.btremote.ui.components.TextLarge
 import com.atharok.btremote.ui.theme.surfaceElevationMedium
 import com.atharok.btremote.ui.views.RemoteScreenHelpModalBottomSheet
 import com.atharok.btremote.ui.views.keyboard.AdvancedKeyboard
@@ -119,6 +120,7 @@ fun RemoteScreen(
 
     StatelessRemoteScreen(
         deviceName = bluetoothDeviceHidConnectionState.deviceName,
+        bluetoothDeviceHidConnectionState = bluetoothDeviceHidConnectionState,
         isLandscapeMode = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
         topBarActions = {
             TopBarActions(
@@ -143,6 +145,7 @@ fun RemoteScreen(
                 isAdvancedKeyboardVisible = remoteSettings.useAdvancedKeyboard && remoteSettings.useAdvancedKeyboardIntegrated && isKeyboardVisible,
                 onMoreButtonsVisibleChanged = { isMoreButtonsVisible = !isMoreButtonsVisible },
                 keyboardLanguage = remoteSettings.keyboardLanguage,
+                hapticFeedbackEnabled = remoteSettings.hapticFeedback,
                 sendRemoteKeyReport = remoteViewModel.sendRemoteReport,
                 sendKeyboardKeyReport = remoteViewModel.sendKeyboardReport
             )
@@ -203,6 +206,7 @@ fun RemoteScreen(
 @Composable
 private fun StatelessRemoteScreen(
     deviceName: String,
+    bluetoothDeviceHidConnectionState: DeviceHidConnectionState,
     isLandscapeMode: Boolean,
     topBarActions: @Composable (RowScope.() -> Unit),
     remoteLayout: @Composable () -> Unit,
@@ -211,7 +215,21 @@ private fun StatelessRemoteScreen(
     modifier: Modifier = Modifier
 ) {
     AppScaffold(
-        title = deviceName,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_normal))
+            ) {
+                TextLarge(text = deviceName)
+                if (bluetoothDeviceHidConnectionState.state == BluetoothHidDevice.STATE_CONNECTED) {
+                    androidx.compose.material3.Icon(
+                        imageVector = AppIcons.EnabledAutoConnect,
+                        contentDescription = stringResource(id = R.string.connected_on, deviceName),
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
         modifier = modifier,
         scrollBehavior = null,
         topBarActions = topBarActions
@@ -321,6 +339,7 @@ private fun RemoteLayout(
     isAdvancedKeyboardVisible: Boolean,
     onMoreButtonsVisibleChanged: () -> Unit,
     keyboardLanguage: KeyboardLanguage,
+    hapticFeedbackEnabled: Boolean,
     sendRemoteKeyReport: (ByteArray) -> Unit,
     sendKeyboardKeyReport: (ByteArray) -> Unit
 ) {
@@ -338,6 +357,7 @@ private fun RemoteLayout(
             RemoteButtonsLayouts(
                 useMinimalistRemote = useMinimalistRemote,
                 onMoreButtonsVisibleChanged = onMoreButtonsVisibleChanged,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 sendRemoteKeyReport = sendRemoteKeyReport,
                 sendKeyboardKeyReport = sendKeyboardKeyReport,
             )
@@ -349,6 +369,7 @@ private fun RemoteLayout(
 private fun RemoteButtonsLayouts(
     useMinimalistRemote: Boolean,
     onMoreButtonsVisibleChanged: () -> Unit,
+    hapticFeedbackEnabled: Boolean,
     sendRemoteKeyReport: (ByteArray) -> Unit,
     sendKeyboardKeyReport: (ByteArray) -> Unit
 ) {
@@ -361,6 +382,7 @@ private fun RemoteButtonsLayouts(
                 isTVChannelButtonsVisible = !isTVChannelButtonsVisible
             },
             onMoreButtonsVisibleChanged = onMoreButtonsVisibleChanged,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier.padding(dimensionResource(id = R.dimen.padding_normal))
         )
 
@@ -377,6 +399,7 @@ private fun RemoteButtonsLayouts(
         RemoteView(
             sendRemoteKeyReport = sendRemoteKeyReport,
             sendKeyboardKeyReport = sendKeyboardKeyReport,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier.padding(dimensionResource(id = R.dimen.padding_normal))
         )
     }
@@ -398,14 +421,17 @@ private fun NavigationLayout(
                     sendRemoteKeyReport = sendRemoteKeyReport,
                     sendKeyboardKeyReport = sendKeyboardKeyReport,
                     useEnterForSelection = remoteSettings.useEnterForSelection,
+                    hapticFeedbackEnabled = remoteSettings.hapticFeedback
                 )
             }
 
             NavigationToggle.MOUSE -> {
                 MousePadLayout(
                     mouseSpeed = remoteSettings.mouseSpeed,
+                    gyroscopeSensitivity = remoteSettings.gyroscopeSensitivity,
                     shouldInvertMouseScrollingDirection = remoteSettings.shouldInvertMouseScrollingDirection,
                     useGyroscope = remoteSettings.useGyroscope,
+                    hapticFeedbackEnabled = remoteSettings.hapticFeedback,
                     sendMouseInput = sendMouseKeyReport,
                     modifier = Modifier
                 )
@@ -419,13 +445,15 @@ private fun RemotePadLayout(
     remoteNavigationMode: RemoteNavigationEntity,
     sendRemoteKeyReport: (ByteArray) -> Unit,
     sendKeyboardKeyReport: (ByteArray) -> Unit,
-    useEnterForSelection: Boolean
+    useEnterForSelection: Boolean,
+    hapticFeedbackEnabled: Boolean
 ) {
     if(remoteNavigationMode == RemoteNavigationEntity.D_PAD) {
         RemoteDirectionalPadNavigation(
             sendRemoteKeyReport = sendRemoteKeyReport,
             sendKeyboardKeyReport = sendKeyboardKeyReport,
             useEnterForSelection = useEnterForSelection,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier.aspectRatio(1f)
         )
     } else {
@@ -433,6 +461,7 @@ private fun RemotePadLayout(
             sendRemoteKeyReport = sendRemoteKeyReport,
             sendKeyboardKeyReport = sendKeyboardKeyReport,
             useEnterForSelection = useEnterForSelection,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
         )
     }

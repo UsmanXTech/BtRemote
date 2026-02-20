@@ -23,6 +23,8 @@ fun MousePad(
     shape: Shape,
     modifier: Modifier = Modifier
 ) {
+    var tapTimestamp by remember { mutableStateOf(0L) }
+
     DefaultElevatedCard(
         modifier = modifier,
         shape = shape
@@ -47,8 +49,9 @@ fun MousePad(
                                         inputChange = inputChange,
                                         updateTouchPosition = updateTouchPosition
                                     )
-                                    doTap(
+                                    tapTimestamp = doTap(
                                         inputChange = inputChange,
+                                        tapTimestamp = tapTimestamp,
                                         updateMouseInput = updateMouseInput
                                     )
                                 }
@@ -83,24 +86,26 @@ private fun moveMouse(
     )
 }
 
-private var tapTimestamp: Long = 0L
 private fun doTap(
     inputChange: PointerInputChange,
+    tapTimestamp: Long,
     updateMouseInput: (input: MouseAction) -> Unit
-) {
+): Long {
     val currentTime = System.currentTimeMillis()
+    var newTapTimestamp = tapTimestamp
 
     when {
-        inputChange.changedToDown() -> tapTimestamp = currentTime
+        inputChange.changedToDown() -> newTapTimestamp = currentTime
         inputChange.changedToUp() -> {
             val position = inputChange.position
             val previousPosition = inputChange.previousPosition
             if(currentTime - tapTimestamp < 200 && position.x == previousPosition.x && position.y == previousPosition.y) {
                 updateMouseInput(MouseAction.PAD_TAP)
             }
-            tapTimestamp = 0L
+            newTapTimestamp = 0L
         }
     }
+    return newTapTimestamp
 }
 
 private fun doWheel(

@@ -27,6 +27,7 @@ fun RemoteView(
     sendRemoteKeyReport: (ByteArray) -> Unit,
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     buttonShape: Shape = CircleShape
 ) {
     val padding: Dp = dimensionResource(id = R.dimen.padding_normal)
@@ -34,6 +35,7 @@ fun RemoteView(
     Column(modifier = modifier) {
         MultimediaButtonsLayout(
             sendRemoteKeyReport = sendRemoteKeyReport,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -54,6 +56,7 @@ fun RemoteView(
                     topButtonProperties = RemoteButtonProperties.VolumeUpButton,
                     bottomButtonProperties = RemoteButtonProperties.VolumeDownButton,
                     sendRemoteKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier
                         .weight(2f)
                         .padding(padding)
@@ -64,6 +67,7 @@ fun RemoteView(
                 RemoteIconSurfaceButton(
                     properties = RemoteButtonProperties.VolumeMuteButton,
                     sendKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -71,6 +75,7 @@ fun RemoteView(
                 RemoteIconSurfaceButton(
                     properties = RemoteButtonProperties.BackButton,
                     sendKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -82,6 +87,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel1Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -89,6 +95,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel4Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -96,6 +103,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel7Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -103,6 +111,7 @@ fun RemoteView(
                 RemoteIconSurfaceButton(
                     properties = RemoteButtonProperties.HomeButton,
                     sendKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -114,6 +123,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel2Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -121,6 +131,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel5Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -128,6 +139,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel8Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -135,6 +147,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel0Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -146,6 +159,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel3Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -153,6 +167,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel6Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -160,6 +175,7 @@ fun RemoteView(
                 ChannelSurfaceButton(
                     properties = ChannelButtonProperties.Channel9Button,
                     sendKeyReport = sendKeyboardKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -167,6 +183,7 @@ fun RemoteView(
                 RemoteIconSurfaceButton(
                     properties = RemoteButtonProperties.MenuButton,
                     sendKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -179,6 +196,7 @@ fun RemoteView(
                     topButtonProperties = RemoteButtonProperties.ChannelUpButton,
                     bottomButtonProperties = RemoteButtonProperties.ChannelDownButton,
                     sendRemoteKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier
                         .weight(2f)
                         .padding(padding)
@@ -189,6 +207,7 @@ fun RemoteView(
                 RemoteIconSurfaceButton(
                     properties = RemoteButtonProperties.ClosedCaptionsButton,
                     sendKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -196,6 +215,7 @@ fun RemoteView(
                 RemoteIconSurfaceButton(
                     properties = RemoteButtonProperties.PowerButton,
                     sendKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier.weight(1f).padding(padding),
                     shape = buttonShape
                 )
@@ -210,6 +230,7 @@ fun MinimalistRemoteView(
     onTVChannelButtonsChanged: () -> Unit,
     onMoreButtonsVisibleChanged: () -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     buttonShape: Shape = CircleShape
 ) {
     val padding: Dp = dimensionResource(id = R.dimen.padding_normal)
@@ -217,6 +238,7 @@ fun MinimalistRemoteView(
     Column(modifier = modifier) {
         MultimediaButtonsLayout(
             sendRemoteKeyReport = sendRemoteKeyReport,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -236,6 +258,7 @@ fun MinimalistRemoteView(
                     topButtonProperties = RemoteButtonProperties.VolumeUpButton,
                     bottomButtonProperties = RemoteButtonProperties.VolumeDownButton,
                     sendRemoteKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier,
                     shape = buttonShape
                 )
@@ -250,6 +273,7 @@ fun MinimalistRemoteView(
                     RemoteIconSurfaceButton(
                         properties = RemoteButtonProperties.VolumeMuteButton,
                         sendKeyReport = sendRemoteKeyReport,
+                        hapticFeedbackEnabled = hapticFeedbackEnabled,
                         modifier = Modifier.weight(1f).padding(padding),
                         shape = buttonShape
                     )
@@ -257,6 +281,7 @@ fun MinimalistRemoteView(
                     RemoteIconSurfaceButton(
                         properties = RemoteButtonProperties.ClosedCaptionsButton,
                         sendKeyReport = sendRemoteKeyReport,
+                        hapticFeedbackEnabled = hapticFeedbackEnabled,
                         modifier = Modifier.weight(1f).padding(padding),
                         shape = buttonShape
                     )
@@ -270,6 +295,7 @@ fun MinimalistRemoteView(
                         contentDescription = stringResource(id = R.string.tv),
                         touchDown = {},
                         touchUp = onTVChannelButtonsChanged,
+                        hapticFeedbackEnabled = hapticFeedbackEnabled,
                         modifier = Modifier.weight(1f).padding(padding),
                         shape = buttonShape
                     )
@@ -279,6 +305,7 @@ fun MinimalistRemoteView(
                         contentDescription = stringResource(id = R.string.more_buttons),
                         touchDown = {},
                         touchUp = onMoreButtonsVisibleChanged,
+                        hapticFeedbackEnabled = hapticFeedbackEnabled,
                         modifier = Modifier.weight(1f).padding(padding),
                         shape = buttonShape
                     )
@@ -293,6 +320,7 @@ fun MinimalistRemoteView(
                     topButtonProperties = RemoteButtonProperties.BrightnessUpButton,
                     bottomButtonProperties = RemoteButtonProperties.BrightnessDownButton,
                     sendRemoteKeyReport = sendRemoteKeyReport,
+                    hapticFeedbackEnabled = hapticFeedbackEnabled,
                     modifier = Modifier,
                     shape = buttonShape
                 )
@@ -306,6 +334,7 @@ fun MinimalistRemoteView(
             RemoteIconSurfaceButton(
                 properties = RemoteButtonProperties.BackButton,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.weight(1f).padding(padding),
                 shape = buttonShape
             )
@@ -313,6 +342,7 @@ fun MinimalistRemoteView(
             RemoteIconSurfaceButton(
                 properties = RemoteButtonProperties.HomeButton,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.weight(1f).padding(padding),
                 shape = buttonShape
             )
@@ -320,6 +350,7 @@ fun MinimalistRemoteView(
             RemoteIconSurfaceButton(
                 properties = RemoteButtonProperties.MenuButton,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.weight(1f).padding(padding),
                 shape = buttonShape
             )
@@ -327,6 +358,7 @@ fun MinimalistRemoteView(
             RemoteIconSurfaceButton(
                 properties = RemoteButtonProperties.PowerButton,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.weight(1f).padding(padding),
                 shape = buttonShape
             )

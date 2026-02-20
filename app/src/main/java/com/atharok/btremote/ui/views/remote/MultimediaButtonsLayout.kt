@@ -18,6 +18,7 @@ import com.atharok.btremote.ui.theme.surfaceElevationMedium
 fun MultimediaButtonsLayout(
     sendRemoteKeyReport: (ByteArray) -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     elevation: Dp = surfaceElevationMedium()
 ) {
@@ -34,6 +35,7 @@ fun MultimediaButtonsLayout(
             RemoteIconRawButton(
                 properties = RemoteButtonProperties.RewindButton,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.weight(24f),
                 shape = shape,
                 iconFillFraction = 0.6f
@@ -42,6 +44,7 @@ fun MultimediaButtonsLayout(
             RemoteIconRawButton(
                 properties = RemoteButtonProperties.PlayPauseButton,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.weight(40f),
                 shape = shape,
                 iconFillFraction = 0.6f
@@ -50,6 +53,7 @@ fun MultimediaButtonsLayout(
             RemoteIconRawButton(
                 properties = RemoteButtonProperties.ForwardButton,
                 sendKeyReport = sendRemoteKeyReport,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
                 modifier = Modifier.weight(24f),
                 shape = shape,
                 iconFillFraction = 0.6f

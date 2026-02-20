@@ -1,5 +1,7 @@
 package com.atharok.btremote.domain.entities.settings
 
+import com.atharok.btremote.common.utils.DEFAULT_GYROSCOPE_SENSITIVITY
+import com.atharok.btremote.common.utils.DEFAULT_HAPTIC_FEEDBACK
 import com.atharok.btremote.common.utils.DEFAULT_KEYBOARD_LANGUAGE
 import com.atharok.btremote.common.utils.DEFAULT_MOUSE_SPEED
 import com.atharok.btremote.common.utils.DEFAULT_MUST_CLEAR_INPUT_FIELD
@@ -19,6 +21,7 @@ data class RemoteSettings(
     val mouseSpeed: Float = DEFAULT_MOUSE_SPEED,
     val shouldInvertMouseScrollingDirection: Boolean = DEFAULT_SHOULD_INVERT_MOUSE_SCROLLING_DIRECTION,
     val useGyroscope: Boolean = DEFAULT_USE_GYROSCOPE,
+    val gyroscopeSensitivity: Float = DEFAULT_GYROSCOPE_SENSITIVITY,
 
     // ---- Keyboard ----
     val keyboardLanguage: KeyboardLanguage = DEFAULT_KEYBOARD_LANGUAGE,
@@ -30,5 +33,6 @@ data class RemoteSettings(
     val remoteNavigationEntity: RemoteNavigationEntity = DEFAULT_REMOTE_NAVIGATION,
     val useMinimalistRemote: Boolean = DEFAULT_USE_MINIMALIST_REMOTE,
     val useEnterForSelection: Boolean = DEFAULT_USE_ENTER_FOR_SELECTION,
-    val useMouseNavigationByDefault: Boolean = USE_MOUSE_NAVIGATION_BY_DEFAULT
+    val useMouseNavigationByDefault: Boolean = USE_MOUSE_NAVIGATION_BY_DEFAULT,
+    val hapticFeedback: Boolean = DEFAULT_HAPTIC_FEEDBACK
 )

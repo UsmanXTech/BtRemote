@@ -33,6 +33,7 @@ fun ChannelSurfaceButton(
     properties: ChannelButtonProperties,
     sendKeyReport: (ByteArray) -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     @FloatRange(from = 0.0, to = 1.0) percent: Float = 0.45f,
     shape: Shape = RectangleShape,
     elevation: Dp = surfaceElevationMedium(),
@@ -42,6 +43,7 @@ fun ChannelSurfaceButton(
         touchDown = { sendKeyReport(properties.input) },
         touchUp = { sendKeyReport(REMOTE_INPUT_NONE) },
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape,
         elevation = elevation,
         shadowElevation = shadowElevation
@@ -64,6 +66,7 @@ fun CharacterKeyboardKey(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     textSecondary: String? = null,
     textTertiary: String? = null,
     shape: Shape = RoundedCornerShape(dimensionResource(id = R.dimen.keyboard_key_corner_radius)),
@@ -73,6 +76,7 @@ fun CharacterKeyboardKey(
         touchDown = touchDown,
         touchUp = touchUp,
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape,
         elevation = elevation
     ) {
@@ -124,6 +128,7 @@ fun TextKeyboardKey(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RoundedCornerShape(dimensionResource(id = R.dimen.keyboard_key_corner_radius)),
     elevation: Dp = surfaceElevationMedium(),
     textAlign: TextAlign = TextAlign.Center
@@ -132,6 +137,7 @@ fun TextKeyboardKey(
         touchDown = touchDown,
         touchUp = touchUp,
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape,
         elevation = elevation
     ) {

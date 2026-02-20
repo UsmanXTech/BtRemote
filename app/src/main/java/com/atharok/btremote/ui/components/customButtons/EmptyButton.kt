@@ -19,6 +19,7 @@ fun EmptySurfaceButton(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     elevation: Dp = surfaceElevationMedium(),
     shadowElevation: Dp = surfaceElevationShadow(),
@@ -27,6 +28,7 @@ fun EmptySurfaceButton(
         touchDown = touchDown,
         touchUp = touchUp,
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape,
         elevation = elevation,
         shadowElevation = shadowElevation
@@ -42,6 +44,7 @@ fun RemoteEmptySurfaceButton(
     properties: RemoteButtonProperties,
     sendKeyReport: (ByteArray) -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     elevation: Dp = surfaceElevationMedium(),
     shadowElevation: Dp = surfaceElevationShadow()
@@ -50,6 +53,7 @@ fun RemoteEmptySurfaceButton(
         touchDown = { sendKeyReport(properties.input) },
         touchUp = { sendKeyReport(REMOTE_INPUT_NONE) },
         modifier = modifier,
+        hapticFeedbackEnabled = hapticFeedbackEnabled,
         shape = shape,
         elevation = elevation,
         shadowElevation = shadowElevation

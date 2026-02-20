@@ -27,22 +27,20 @@ import com.atharok.btremote.ui.components.customButtons.IconSurfaceButton
 import kotlin.jvm.internal.Ref.BooleanRef
 import kotlin.jvm.internal.Ref.FloatRef
 
-private data class MouseScrolling(
-    val mouseX: Float = 0f,
-    val mouseY: Float = 0f,
-    val mouseWheel: Float = 0f,
-)
-
 @Composable
 fun MousePadLayout(
     mouseSpeed: Float,
+    gyroscopeSensitivity: Float,
     shouldInvertMouseScrollingDirection: Boolean,
     useGyroscope: Boolean,
+    hapticFeedbackEnabled: Boolean,
     sendMouseInput: (MouseAction, Float, Float, Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val mouseAction: MutableState<MouseAction> = remember { mutableStateOf(MouseAction.NONE) }
-    val mouseScrolling: MutableState<MouseScrolling> = remember { mutableStateOf(MouseScrolling()) }
+    var mouseActionState by remember { mutableStateOf(MouseAction.NONE) }
+    var mouseXState by remember { mutableStateOf(0f) }
+    var mouseYState by remember { mutableStateOf(0f) }
+    var mouseWheelState by remember { mutableStateOf(0f) }
 
     val mouseSpeedRef = remember { FloatRef() }
     mouseSpeedRef.element = mouseSpeed
@@ -50,18 +48,20 @@ fun MousePadLayout(
     val shouldInvertMouseScrollingDirectionRef = remember { BooleanRef() }
     shouldInvertMouseScrollingDirectionRef.element = shouldInvertMouseScrollingDirection
 
-    LaunchedEffect(mouseAction.value, mouseScrolling.value) {
-        sendMouseInput(mouseAction.value, mouseScrolling.value.mouseX, mouseScrolling.value.mouseY, mouseScrolling.value.mouseWheel)
-        if (mouseAction.value == MouseAction.PAD_TAP) {
-            mouseAction.value = MouseAction.NONE
+    LaunchedEffect(mouseActionState, mouseXState, mouseYState, mouseWheelState) {
+        sendMouseInput(mouseActionState, mouseXState, mouseYState, mouseWheelState)
+        if (mouseActionState == MouseAction.PAD_TAP) {
+            mouseActionState = MouseAction.NONE
         }
     }
 
     if(useGyroscope) {
         MouseGyroscope(
             mouseSpeed = mouseSpeed,
+            gyroscopeSensitivity = gyroscopeSensitivity,
             onMousePositionChange = { x: Float, y: Float ->
-                mouseScrolling.value = MouseScrolling(mouseX = x, mouseY = y)
+                mouseXState = x
+                mouseYState = y
             }
         )
     }
@@ -75,15 +75,14 @@ fun MousePadLayout(
             MousePad(
                 mouseSpeed = mouseSpeedRef,
                 updateMouseInput = {
-                    mouseAction.value = it
+                    mouseActionState = it
                 },
                 updateTouchPosition = { x: Float, y: Float ->
-                    mouseScrolling.value = MouseScrolling(mouseX = x, mouseY = y)
+                    mouseXState = x
+                    mouseYState = y
                 },
                 updateWheel = { wheel: Float ->
-                    mouseScrolling.value = MouseScrolling(
-                        mouseWheel = wheel * if(shouldInvertMouseScrollingDirectionRef.element) -1f else 1f
-                    )
+                    mouseWheelState = wheel * if(shouldInvertMouseScrollingDirectionRef.element) -1f else 1f
                 },
                 shape = RoundedCornerShape(
                     topStart = dimensionResource(id = R.dimen.card_corner_radius),
@@ -97,9 +96,10 @@ fun MousePadLayout(
             )
 
             ScrollMouseButtonsLayout(
-                mouseScrolling = mouseScrolling.value,
-                onMouseScrollingChange = {
-                    mouseScrolling.value = it
+                mouseWheel = mouseWheelState,
+                hapticFeedbackEnabled = hapticFeedbackEnabled,
+                onMouseWheelChange = {
+                    mouseWheelState = it
                 },
                 modifier = Modifier
                     .weight(0.15f)
@@ -108,8 +108,9 @@ fun MousePadLayout(
         }
 
         MouseButtonsLayout(
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             onMouseActionChange = {
-                mouseAction.value = it
+                mouseActionState = it
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -123,20 +124,22 @@ fun MousePadLayout(
 
 @Composable
 private fun MouseButtonsLayout(
+    hapticFeedbackEnabled: Boolean,
     onMouseActionChange: (MouseAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val layoutDirection = LocalLayoutDirection.current
 
     if(layoutDirection == LayoutDirection.Rtl) {
-        MouseButtonsLayoutRTL(onMouseActionChange, modifier)
+        MouseButtonsLayoutRTL(hapticFeedbackEnabled, onMouseActionChange, modifier)
     } else {
-        MouseButtonsLayoutLTR(onMouseActionChange, modifier)
+        MouseButtonsLayoutLTR(hapticFeedbackEnabled, onMouseActionChange, modifier)
     }
 }
 
 @Composable
 private fun MouseButtonsLayoutLTR(
+    hapticFeedbackEnabled: Boolean,
     onMouseActionChange: (MouseAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -146,6 +149,7 @@ private fun MouseButtonsLayoutLTR(
         EmptySurfaceButton(
             touchDown = { onMouseActionChange(MouseAction.MOUSE_CLICK_LEFT) },
             touchUp = { onMouseActionChange(MouseAction.NONE) },
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .weight(0.38f)
                 .fillMaxHeight()
@@ -162,6 +166,7 @@ private fun MouseButtonsLayoutLTR(
         EmptySurfaceButton(
             touchDown = { onMouseActionChange(MouseAction.MOUSE_CLICK_MIDDLE) },
             touchUp = { onMouseActionChange(MouseAction.NONE) },
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .weight(0.24f)
                 .fillMaxHeight()
@@ -176,6 +181,7 @@ private fun MouseButtonsLayoutLTR(
         EmptySurfaceButton(
             touchDown = { onMouseActionChange(MouseAction.MOUSE_CLICK_RIGHT) },
             touchUp = { onMouseActionChange(MouseAction.NONE) },
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .weight(0.38f)
                 .fillMaxHeight()
@@ -192,6 +198,7 @@ private fun MouseButtonsLayoutLTR(
 
 @Composable
 private fun MouseButtonsLayoutRTL(
+    hapticFeedbackEnabled: Boolean,
     onMouseActionChange: (MouseAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -201,6 +208,7 @@ private fun MouseButtonsLayoutRTL(
         EmptySurfaceButton(
             touchDown = { onMouseActionChange(MouseAction.MOUSE_CLICK_LEFT) },
             touchUp = { onMouseActionChange(MouseAction.NONE) },
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .weight(0.38f)
                 .fillMaxHeight()
@@ -217,6 +225,7 @@ private fun MouseButtonsLayoutRTL(
         EmptySurfaceButton(
             touchDown = { onMouseActionChange(MouseAction.MOUSE_CLICK_MIDDLE) },
             touchUp = { onMouseActionChange(MouseAction.NONE) },
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .weight(0.24f)
                 .fillMaxHeight()
@@ -231,6 +240,7 @@ private fun MouseButtonsLayoutRTL(
         EmptySurfaceButton(
             touchDown = { onMouseActionChange(MouseAction.MOUSE_CLICK_RIGHT) },
             touchUp = { onMouseActionChange(MouseAction.NONE) },
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .weight(0.38f)
                 .fillMaxHeight()
@@ -249,8 +259,9 @@ private fun MouseButtonsLayoutRTL(
 
 @Composable
 private fun ScrollMouseButtonsLayout(
-    mouseScrolling: MouseScrolling,
-    onMouseScrollingChange: (MouseScrolling) -> Unit,
+    mouseWheel: Float,
+    hapticFeedbackEnabled: Boolean,
+    onMouseWheelChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -258,23 +269,12 @@ private fun ScrollMouseButtonsLayout(
             image = AppIcons.MouseScrollUp,
             contentDescription = stringResource(id = R.string.mouse_wheel_up),
             touchDown = {
-                onMouseScrollingChange(
-                    MouseScrolling(
-                        mouseX = mouseScrolling.mouseX,
-                        mouseY = mouseScrolling.mouseY,
-                        mouseWheel = 1f
-                    )
-                )
+                onMouseWheelChange(1f)
             },
             touchUp = {
-                onMouseScrollingChange(
-                    MouseScrolling(
-                        mouseX = mouseScrolling.mouseX,
-                        mouseY = mouseScrolling.mouseY,
-                        mouseWheel = 0f
-                    )
-                )
+                onMouseWheelChange(0f)
             },
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(0.5f)
@@ -286,23 +286,12 @@ private fun ScrollMouseButtonsLayout(
             image = AppIcons.MouseScrollDown,
             contentDescription = stringResource(id = R.string.mouse_wheel_down),
             touchDown = {
-                onMouseScrollingChange(
-                    MouseScrolling(
-                        mouseX = mouseScrolling.mouseX,
-                        mouseY = mouseScrolling.mouseY,
-                        mouseWheel = -1f
-                    )
-                )
+                onMouseWheelChange(-1f)
             },
             touchUp = {
-                onMouseScrollingChange(
-                    MouseScrolling(
-                        mouseX = mouseScrolling.mouseX,
-                        mouseY = mouseScrolling.mouseY,
-                        mouseWheel = 0f
-                    )
-                )
+                onMouseWheelChange(0f)
             },
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(0.5f)

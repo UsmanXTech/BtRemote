@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atharok.btremote.R
 import com.atharok.btremote.common.utils.AppIcons
@@ -38,6 +39,7 @@ import com.atharok.btremote.ui.components.BasicIconButton
 import com.atharok.btremote.ui.components.HelpIconButton
 import com.atharok.btremote.ui.components.LoadingDialog
 import com.atharok.btremote.ui.components.NavigateUpIconButton
+import com.atharok.btremote.ui.components.OnLifecycleEvent
 import com.atharok.btremote.ui.components.SettingsIconButton
 import com.atharok.btremote.ui.components.TextNormalSecondary
 import com.atharok.btremote.ui.views.BluetoothScanningScreenHelpModalBottomSheet
@@ -104,6 +106,12 @@ private fun DeviceDiscoveryScreen(
         onDispose {
             deviceDiscoveryViewModel.cancelDiscovery()
             deviceDiscoveryViewModel.unregisterBluetoothScannerReceiver()
+        }
+    }
+
+    OnLifecycleEvent { _, event ->
+        if(event == Lifecycle.Event.ON_STOP) {
+            deviceDiscoveryViewModel.cancelDiscovery()
         }
     }
 

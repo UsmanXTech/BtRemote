@@ -26,6 +26,7 @@ import com.atharok.btremote.ui.theme.surfaceElevationShadow
 private fun StatefulCustomButton(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
+    hapticFeedbackEnabled: Boolean = true,
     content: @Composable (interactionSource: MutableInteractionSource) -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -35,7 +36,9 @@ private fun StatefulCustomButton(
         interactionSource.interactions.collect { interaction ->
             when (interaction) {
                 is PressInteraction.Press -> {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (hapticFeedbackEnabled) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
                     touchDown()
                 }
                 is PressInteraction.Release -> touchUp()
@@ -51,12 +54,14 @@ private fun StatefulCustomButton(
 private fun CustomButton(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape,
     content: @Composable () -> Unit
 ) {
     StatefulCustomButton(
         touchDown = touchDown,
-        touchUp = touchUp
+        touchUp = touchUp,
+        hapticFeedbackEnabled = hapticFeedbackEnabled
     ) {
         Box(
             modifier = Modifier
@@ -82,6 +87,7 @@ fun SurfaceButton(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     elevation: Dp = surfaceElevationMedium(),
     shadowElevation: Dp = surfaceElevationShadow(),
@@ -96,6 +102,7 @@ fun SurfaceButton(
         CustomButton(
             touchDown = touchDown,
             touchUp = touchUp,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             shape = shape,
             content = content
         )
@@ -109,6 +116,7 @@ fun RawButton(
     touchDown: () -> Unit,
     touchUp: () -> Unit,
     modifier: Modifier = Modifier,
+    hapticFeedbackEnabled: Boolean = true,
     shape: Shape = RectangleShape,
     content: @Composable () -> Unit
 ) {
@@ -116,6 +124,7 @@ fun RawButton(
         CustomButton(
             touchDown = touchDown,
             touchUp = touchUp,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             shape = shape,
             content = content
         )

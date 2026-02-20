@@ -20,6 +20,48 @@ fun AppScaffold(
     snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
+    AppScaffold(
+        title = { TextLarge(text = title) },
+        modifier = modifier,
+        navigateUp = navigateUp,
+        topBarActions = topBarActions,
+        snackbarHost = snackbarHost,
+        content = content
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppScaffold(
+    title: String,
+    modifier: Modifier = Modifier,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
+    navigateUp: @Composable () -> Unit = {},
+    topBarActions: @Composable RowScope.() -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
+    content: @Composable (PaddingValues) -> Unit
+) {
+    AppScaffold(
+        title = { TextLarge(text = title) },
+        modifier = modifier,
+        scrollBehavior = scrollBehavior,
+        navigateUp = navigateUp,
+        topBarActions = topBarActions,
+        snackbarHost = snackbarHost,
+        content = content
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppScaffold(
+    title: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    navigateUp: @Composable () -> Unit = {},
+    topBarActions: @Composable RowScope.() -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
+    content: @Composable (PaddingValues) -> Unit
+) {
     val scrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     AppScaffold(
         title = title,
@@ -35,7 +77,7 @@ fun AppScaffold(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppScaffold(
-    title: String,
+    title: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     navigateUp: @Composable () -> Unit = {},

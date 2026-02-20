@@ -31,6 +31,8 @@ interface DataStoreRepository {
 
     suspend fun saveUseGyroscope(useGyroscope: Boolean)
 
+    suspend fun saveGyroscopeSensitivity(sensitivity: Float)
+
     suspend fun saveKeyboardLanguage(language: KeyboardLanguage)
 
     suspend fun saveMustClearInputField(mustClearInputField: Boolean)
@@ -46,6 +48,8 @@ interface DataStoreRepository {
     suspend fun saveUseEnterForSelection(useEnterForSelection: Boolean)
 
     suspend fun saveUseMouseNavigationByDefault(useMouseNavigationByDefault: Boolean)
+
+    suspend fun saveHapticFeedback(hapticFeedback: Boolean)
 
     // ---- Others ----
 

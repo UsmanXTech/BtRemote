@@ -23,8 +23,8 @@ class GyroscopeSensor(
     val gyroscopePositionsState: StateFlow<Triple<Float, Float, Float>> = _gyroscopePositionsState.asStateFlow()
 
     fun startListening() {
-        gyroscope?.also {
-            sensorManager.registerListener(this, it, 10000)
+        gyroscope?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
     }
 
