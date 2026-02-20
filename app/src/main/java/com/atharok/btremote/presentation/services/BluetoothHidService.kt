@@ -9,7 +9,9 @@ import android.bluetooth.BluetoothProfile.STATE_CONNECTED
 import android.bluetooth.BluetoothProfile.STATE_DISCONNECTED
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
@@ -39,51 +41,66 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.koin.android.ext.android.inject
+import org.koin.android.ext.android.get
 
 class BluetoothHidService : Service() {
-    private val useCase: BluetoothHidServiceUseCase by inject()
+    private var useCase: BluetoothHidServiceUseCase? = null
     private lateinit var notificationManager: NotificationManager
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var currentConnectionState = STATE_DISCONNECTED
 
     override fun onCreate() {
         super.onCreate()
+        notificationManager = getSystemService(NotificationManager::class.java)
         createNotificationChannel()
 
         try {
-            startForeground(NOTIFICATION_ID, createNotification())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    createNotification(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, createNotification())
+            }
         } catch (exception: Exception) {
             stopSelf()
+            return
         }
 
         serviceScope.launch {
-            useCase.isBluetoothServiceRunning().collect {
-                if(!it) stopSelf()
-            }
-        }
-
-        serviceScope.launch {
-            useCase.getDeviceHidConnectionState().collect {
-                var stateChanged = false
-                when(it.state) {
-                    STATE_CONNECTED -> {
-                        if(currentConnectionState != STATE_CONNECTED) {
-                            updateNotificationForConnectedState(it.deviceName)
-                            currentConnectionState = STATE_CONNECTED
-                            stateChanged = true
-                        }
-                    }
-                    STATE_DISCONNECTED -> {
-                        if(currentConnectionState != STATE_DISCONNECTED) {
-                            updateNotificationForDisconnectedState()
-                            currentConnectionState = STATE_DISCONNECTED
-                            stateChanged = true
-                        }
-                    }
+            val useCaseInstance = get<BluetoothHidServiceUseCase>()
+            useCase = useCaseInstance
+            
+            launch {
+                useCaseInstance.isBluetoothServiceRunning().collect {
+                    if(!it) stopSelf()
                 }
-                if (stateChanged) {
-                    MediaControlWidget().updateAll(this@BluetoothHidService)
+            }
+
+            launch {
+                useCaseInstance.getDeviceHidConnectionState().collect {
+                    var stateChanged = false
+                    when(it.state) {
+                        STATE_CONNECTED -> {
+                            if(currentConnectionState != STATE_CONNECTED) {
+                                updateNotificationForConnectedState(it.deviceName)
+                                currentConnectionState = STATE_CONNECTED
+                                stateChanged = true
+                            }
+                        }
+                        STATE_DISCONNECTED -> {
+                            if(currentConnectionState != STATE_DISCONNECTED) {
+                                updateNotificationForDisconnectedState()
+                                currentConnectionState = STATE_DISCONNECTED
+                                stateChanged = true
+                            }
+                        }
+                    }
+                    if (stateChanged) {
+                        MediaControlWidget().updateAll(this@BluetoothHidService)
+                    }
                 }
             }
         }
@@ -104,6 +121,10 @@ class BluetoothHidService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         serviceScope.launch {
+            // Ensure useCase is initialized before calling
+            if (useCase == null) {
+                useCase = get<BluetoothHidServiceUseCase>()
+            }
             startBluetoothHidProfile()
         }
 
@@ -113,7 +134,6 @@ class BluetoothHidService : Service() {
     // ---- Notification ----
 
     private fun createNotificationChannel() {
-        notificationManager = getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
             getString(R.string.notification_channel_name),
@@ -212,11 +232,11 @@ class BluetoothHidService : Service() {
     // ---- Bluetooth HID Profile ----
 
     private suspend fun startBluetoothHidProfile() {
-        useCase.startHidProfile()
+        useCase?.startHidProfile()
     }
 
     private fun stopBluetoothHidProfile() {
-        useCase.stopHidProfile()
+        useCase?.stopHidProfile()
     }
 
     companion object {
