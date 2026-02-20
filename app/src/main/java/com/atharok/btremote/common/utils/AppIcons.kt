@@ -42,6 +42,8 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Mouse
@@ -83,6 +85,8 @@ object AppIcons {
     val MoreVert get() = Icons.Rounded.MoreVert
     val MoreHoriz get() = Icons.Rounded.MoreHoriz
     val Visibility get() = Icons.Rounded.Visibility
+    val Mic get() = Icons.Rounded.Mic
+    val MicOff get() = Icons.Rounded.MicOff
     //val Done get() = Icons.Rounded.Done
     val Appearance get() = Icons.Rounded.Palette
     //val UserInterface get() = Icons.Rounded.ViewCompact

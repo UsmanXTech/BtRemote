@@ -195,7 +195,8 @@ fun RemoteScreen(
                         mustClearInputField = remoteSettings.mustClearInputField,
                         sendKeyboardKeyReport = remoteViewModel.sendKeyboardReport,
                         sendTextReport = remoteViewModel.sendTextReport,
-                        onShowKeyboardChanged = { isKeyboardVisible = it }
+                        onShowKeyboardChanged = { isKeyboardVisible = it },
+                        remoteViewModel = remoteViewModel
                     )
                 }
                 isMoreButtonsVisible -> {
@@ -484,6 +485,7 @@ private fun KeyboardModalBottomSheet(
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     sendTextReport: (String, VirtualKeyboardLayout, Boolean) -> Unit,
     onShowKeyboardChanged: (Boolean) -> Unit,
+    remoteViewModel: RemoteViewModel
 ) {
     if (useAdvancedKeyboard) {
         AdvancedKeyboardModalBottomSheet(
@@ -506,7 +508,8 @@ private fun KeyboardModalBottomSheet(
             sendTextReport = { text: String, shouldSendEnter: Boolean ->
                 sendTextReport(text, virtualKeyboardLayout, shouldSendEnter)
             },
-            onShowKeyboardBottomSheetChanged = onShowKeyboardChanged
+            onShowKeyboardBottomSheetChanged = onShowKeyboardChanged,
+            remoteViewModel = remoteViewModel
         )
     }
 }

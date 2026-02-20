@@ -42,8 +42,12 @@ fun VirtualKeyboardModalBottomSheet(
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     sendTextReport: (String, Boolean) -> Unit,
     onShowKeyboardBottomSheetChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    remoteViewModel: com.atharok.btremote.presentation.viewmodel.RemoteViewModel = org.koin.androidx.compose.koinViewModel()
 ) {
+    val voiceState by remoteViewModel.voiceState.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     KeyboardModalBottomSheet(
         onShowKeyboardBottomSheetChanged = onShowKeyboardBottomSheetChanged,
         windowInsets = WindowInsets.ime,
@@ -52,26 +56,67 @@ fun VirtualKeyboardModalBottomSheet(
         val focusRequester = remember { FocusRequester() }
         val textState = remember { mutableStateOf("") }
 
-        LaunchedEffect(Unit) {
-            focusRequester.requestFocus()
-        }
-
-        StatelessKeyboardView(
-            mustClearInputField = mustClearInputField,
-            focusRequester = focusRequester,
-            text = textState.value,
-            onTextChange = { newText ->
+        // Sync textState with voice input
+        LaunchedEffect(voiceState.spokenText) {
+            if (voiceState.spokenText.isNotEmpty()) {
+                val newText = voiceState.spokenText
                 val oldText = textState.value
                 
-                // Live writing logic:
-                // 1. Find common prefix
+                // Diff logic for live voice writing
                 var commonPrefixLength = 0
                 val minLength = minOf(oldText.length, newText.length)
                 while (commonPrefixLength < minLength && oldText[commonPrefixLength] == newText[commonPrefixLength]) {
                     commonPrefixLength++
                 }
 
-                // 2. Send backspaces for removed characters after common prefix
+                val addedText = newText.substring(commonPrefixLength)
+                if (addedText.isNotEmpty()) {
+                    sendTextReport(addedText, false)
+                }
+                
+                textState.value = newText
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
+        }
+
+        val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                remoteViewModel.startVoiceInput()
+            }
+        }
+
+        StatelessKeyboardView(
+            mustClearInputField = mustClearInputField,
+            focusRequester = focusRequester,
+            text = textState.value,
+            isVoiceActive = voiceState.isSpeaking,
+            onVoiceClick = {
+                if (voiceState.isSpeaking) {
+                    remoteViewModel.stopVoiceInput()
+                } else {
+                    val permission = android.Manifest.permission.RECORD_AUDIO
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        remoteViewModel.startVoiceInput()
+                    } else {
+                        permissionLauncher.launch(permission)
+                    }
+                }
+            },
+            onTextChange = { newText ->
+                val oldText = textState.value
+                
+                // Live writing logic:
+                var commonPrefixLength = 0
+                val minLength = minOf(oldText.length, newText.length)
+                while (commonPrefixLength < minLength && oldText[commonPrefixLength] == newText[commonPrefixLength]) {
+                    commonPrefixLength++
+                }
+
                 val backspacesCount = oldText.length - commonPrefixLength
                 if (backspacesCount > 0) {
                     repeat(backspacesCount) {
@@ -80,7 +125,6 @@ fun VirtualKeyboardModalBottomSheet(
                     }
                 }
 
-                // 3. Send new characters after common prefix
                 val addedText = newText.substring(commonPrefixLength)
                 if (addedText.isNotEmpty()) {
                     sendTextReport(addedText, false)
@@ -103,6 +147,8 @@ private fun StatelessKeyboardView(
     mustClearInputField: Boolean,
     focusRequester: FocusRequester,
     text: String,
+    isVoiceActive: Boolean,
+    onVoiceClick: () -> Unit,
     onTextChange: (String) -> Unit,
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     sendTextReport: (String, Boolean) -> Unit,
@@ -123,9 +169,18 @@ private fun StatelessKeyboardView(
                 value = text,
                 onValueChange = onTextChange,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .weight(1f)
                     .focusRequester(focusRequester),
                 placeholder = { com.atharok.btremote.ui.components.TextNormalSecondary(text = stringResource(id = R.string.keyboard)) },
+                trailingIcon = {
+                    androidx.compose.material3.IconButton(onClick = onVoiceClick) {
+                        androidx.compose.material3.Icon(
+                            imageVector = if (isVoiceActive) AppIcons.Mic else AppIcons.MicOff,
+                            contentDescription = "Voice Input",
+                            tint = if (isVoiceActive) androidx.compose.material3.MaterialTheme.colorScheme.primary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 keyboardOptions = KeyboardOptions.Default.copy(
                     imeAction = ImeAction.Done
                 ),

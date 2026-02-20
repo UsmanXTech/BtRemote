@@ -15,7 +15,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+import com.atharok.btremote.common.utils.VoiceToTextParser
+import com.atharok.btremote.common.utils.VoiceToTextParserState
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 
 private data class TextReportRequest(
@@ -25,17 +28,28 @@ private data class TextReportRequest(
 )
 
 class RemoteViewModel(
-    private val useCase: RemoteUseCase
+    private val useCase: RemoteUseCase,
+    private val voiceToTextParser: VoiceToTextParser
 ): ViewModel() {
 
     private val textReportChannel = Channel<TextReportRequest>(Channel.UNLIMITED)
+    val voiceState: StateFlow<VoiceToTextParserState> = voiceToTextParser.state
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
             textReportChannel.receiveAsFlow().collect { request ->
+                useCase.sendReport(com.atharok.btremote.common.utils.KEYBOARD_REPORT_ID, com.atharok.btremote.common.utils.REMOTE_INPUT_NONE) // Safety clear
                 useCase.sendTextReport(request.text, request.virtualKeyboardLayout, request.shouldSendEnter)
             }
         }
+    }
+
+    fun startVoiceInput(languageCode: String = "en-US") {
+        voiceToTextParser.startListening(languageCode)
+    }
+
+    fun stopVoiceInput() {
+        voiceToTextParser.stopListening()
     }
 
     // ---- Settings ----

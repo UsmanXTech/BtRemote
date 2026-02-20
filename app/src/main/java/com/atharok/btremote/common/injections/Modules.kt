@@ -178,7 +178,8 @@ private val viewModelModule: Module = module {
 
     viewModel {
         RemoteViewModel(
-            useCase = get<RemoteUseCase>()
+            useCase = get<RemoteUseCase>(),
+            voiceToTextParser = get<com.atharok.btremote.common.utils.VoiceToTextParser>()
         )
     }
 }
@@ -299,6 +300,12 @@ private val dataModule: Module = module {
     single {
         SettingsDataStore(
             context = androidContext()
+        )
+    }
+
+    single {
+        com.atharok.btremote.common.utils.VoiceToTextParser(
+            app = androidContext() as android.app.Application
         )
     }
 }
