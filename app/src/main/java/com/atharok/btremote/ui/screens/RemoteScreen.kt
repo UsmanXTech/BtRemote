@@ -20,6 +20,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -140,22 +141,30 @@ fun RemoteScreen(
             )
         },
         remoteLayout = {
+            val isAdvancedKeyboardVisible = remember {
+                derivedStateOf { remoteSettings.useAdvancedKeyboard && remoteSettings.useAdvancedKeyboardIntegrated && isKeyboardVisible }
+            }
+            val rememberedSendRemoteKeyReport = remember { remoteViewModel.sendRemoteReport }
+            val rememberedSendKeyboardKeyReport = remember { remoteViewModel.sendKeyboardReport }
             RemoteLayout(
                 useMinimalistRemote = remoteSettings.useMinimalistRemote,
-                isAdvancedKeyboardVisible = remoteSettings.useAdvancedKeyboard && remoteSettings.useAdvancedKeyboardIntegrated && isKeyboardVisible,
+                isAdvancedKeyboardVisible = isAdvancedKeyboardVisible.value,
                 onMoreButtonsVisibleChanged = { isMoreButtonsVisible = !isMoreButtonsVisible },
                 keyboardLanguage = remoteSettings.keyboardLanguage,
                 hapticFeedbackEnabled = remoteSettings.hapticFeedback,
-                sendRemoteKeyReport = remoteViewModel.sendRemoteReport,
-                sendKeyboardKeyReport = remoteViewModel.sendKeyboardReport
+                sendRemoteKeyReport = rememberedSendRemoteKeyReport,
+                sendKeyboardKeyReport = rememberedSendKeyboardKeyReport
             )
         },
         navigationLayout = {
+            val rememberedSendRemoteKeyReport = remember { remoteViewModel.sendRemoteReport }
+            val rememberedSendKeyboardKeyReport = remember { remoteViewModel.sendKeyboardReport }
+            val rememberedSendMouseKeyReport = remember { remoteViewModel.sendMouseReport }
             NavigationLayout(
                 remoteSettings = remoteSettings,
-                sendRemoteKeyReport = remoteViewModel.sendRemoteReport,
-                sendKeyboardKeyReport = remoteViewModel.sendKeyboardReport,
-                sendMouseKeyReport = remoteViewModel.sendMouseReport,
+                sendRemoteKeyReport = rememberedSendRemoteKeyReport,
+                sendKeyboardKeyReport = rememberedSendKeyboardKeyReport,
+                sendMouseKeyReport = rememberedSendMouseKeyReport,
                 navigationToggle = navigationToggle,
             )
         },

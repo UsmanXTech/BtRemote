@@ -267,7 +267,7 @@ private fun DiscoveredDevicesListView(
                 }
             }
         }
-        items(devices) { device ->
+        items(devices, key = { it.macAddress }) { device ->
             DeviceItemView(
                 name = device.name,
                 macAddress = device.macAddress,
