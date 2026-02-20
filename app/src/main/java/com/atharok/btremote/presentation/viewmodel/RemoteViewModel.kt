@@ -38,7 +38,6 @@ class RemoteViewModel(
     init {
         viewModelScope.launch(Dispatchers.Default) {
             textReportChannel.receiveAsFlow().collect { request ->
-                useCase.sendReport(com.atharok.btremote.common.utils.KEYBOARD_REPORT_ID, com.atharok.btremote.common.utils.REMOTE_INPUT_NONE) // Safety clear
                 useCase.sendTextReport(request.text, request.virtualKeyboardLayout, request.shouldSendEnter)
             }
         }
@@ -50,6 +49,11 @@ class RemoteViewModel(
 
     fun stopVoiceInput() {
         voiceToTextParser.stopListening()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        voiceToTextParser.destroy()
     }
 
     // ---- Settings ----

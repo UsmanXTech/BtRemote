@@ -25,7 +25,15 @@ class VoiceToTextParser(
     private val _state = MutableStateFlow(VoiceToTextParserState())
     val state: StateFlow<VoiceToTextParserState> = _state.asStateFlow()
 
-    private val recognizer = SpeechRecognizer.createSpeechRecognizer(app)
+    private var recognizer: SpeechRecognizer? = null
+
+    private fun ensureRecognizer() {
+        if (recognizer == null) {
+            recognizer = SpeechRecognizer.createSpeechRecognizer(app).apply {
+                setRecognitionListener(this@VoiceToTextParser)
+            }
+        }
+    }
 
     fun startListening(languageCode: String = "en-US") {
         _state.update { VoiceToTextParserState(isSpeaking = true) }
@@ -35,19 +43,34 @@ class VoiceToTextParser(
             return
         }
 
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageCode)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        // Must be called on Main Thread
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            try {
+                ensureRecognizer()
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageCode)
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                }
+                recognizer?.startListening(intent)
+            } catch (e: Exception) {
+                _state.update { it.copy(error = e.message, isSpeaking = false) }
+            }
         }
-
-        recognizer.setRecognitionListener(this)
-        recognizer.startListening(intent)
     }
 
     fun stopListening() {
         _state.update { it.copy(isSpeaking = false, rmsDb = 0f) }
-        recognizer.stopListening()
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            recognizer?.stopListening()
+        }
+    }
+
+    fun destroy() {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            recognizer?.destroy()
+            recognizer = null
+        }
     }
 
     override fun onReadyForSpeech(params: Bundle?) {
