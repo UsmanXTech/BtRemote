@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.update
 data class VoiceToTextParserState(
     val spokenText: String = "",
     val isSpeaking: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val rmsDb: Float = 0f
 )
 
 class VoiceToTextParser(
@@ -45,7 +46,7 @@ class VoiceToTextParser(
     }
 
     fun stopListening() {
-        _state.update { it.copy(isSpeaking = false) }
+        _state.update { it.copy(isSpeaking = false, rmsDb = 0f) }
         recognizer.stopListening()
     }
 
@@ -55,7 +56,9 @@ class VoiceToTextParser(
 
     override fun onBeginningOfSpeech() {}
 
-    override fun onRmsChanged(rmsdB: Float) {}
+    override fun onRmsChanged(rmsdB: Float) {
+        _state.update { it.copy(rmsDb = rmsdB) }
+    }
 
     override fun onBufferReceived(buffer: ByteArray?) {}
 

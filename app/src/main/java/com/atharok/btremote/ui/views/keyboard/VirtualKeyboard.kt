@@ -1,6 +1,14 @@
 package com.atharok.btremote.ui.views.keyboard
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -8,11 +16,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,21 +35,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atharok.btremote.R
 import com.atharok.btremote.common.utils.AppIcons
+import com.atharok.btremote.common.utils.REMOTE_INPUT_NONE
 import com.atharok.btremote.domain.entities.remoteInput.RemoteButtonProperties
-import com.atharok.btremote.ui.components.customButtons.IconRawButton
+import com.atharok.btremote.presentation.viewmodel.RemoteViewModel
 import com.atharok.btremote.ui.components.customButtons.RemoteIconSurfaceButton
 import com.atharok.btremote.ui.theme.surfaceElevationHigh
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun VirtualKeyboardModalBottomSheet(
@@ -46,10 +65,10 @@ fun VirtualKeyboardModalBottomSheet(
     sendTextReport: (String, Boolean) -> Unit,
     onShowKeyboardBottomSheetChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    remoteViewModel: com.atharok.btremote.presentation.viewmodel.RemoteViewModel = org.koin.androidx.compose.koinViewModel()
+    remoteViewModel: RemoteViewModel = koinViewModel()
 ) {
     val voiceState by remoteViewModel.voiceState.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     KeyboardModalBottomSheet(
         onShowKeyboardBottomSheetChanged = onShowKeyboardBottomSheetChanged,
@@ -72,6 +91,15 @@ fun VirtualKeyboardModalBottomSheet(
                     commonPrefixLength++
                 }
 
+                // Send backspaces for removed characters (rare in voice, but possible with partial results)
+                val backspacesCount = oldText.length - commonPrefixLength
+                if (backspacesCount > 0) {
+                    repeat(backspacesCount) {
+                        sendKeyboardKeyReport(RemoteButtonProperties.KeyboardBackspaceButton.input)
+                        sendKeyboardKeyReport(REMOTE_INPUT_NONE)
+                    }
+                }
+
                 val addedText = newText.substring(commonPrefixLength)
                 if (addedText.isNotEmpty()) {
                     sendTextReport(addedText, false)
@@ -85,8 +113,8 @@ fun VirtualKeyboardModalBottomSheet(
             focusRequester.requestFocus()
         }
 
-        val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+        val permissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
         ) { isGranted ->
             if (isGranted) {
                 remoteViewModel.startVoiceInput()
@@ -98,12 +126,13 @@ fun VirtualKeyboardModalBottomSheet(
             focusRequester = focusRequester,
             text = textState.value,
             isVoiceActive = voiceState.isSpeaking,
+            rmsDb = voiceState.rmsDb,
             onVoiceClick = {
                 if (voiceState.isSpeaking) {
                     remoteViewModel.stopVoiceInput()
                 } else {
-                    val permission = android.Manifest.permission.RECORD_AUDIO
-                    if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    val permission = Manifest.permission.RECORD_AUDIO
+                    if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
                         remoteViewModel.startVoiceInput()
                     } else {
                         permissionLauncher.launch(permission)
@@ -124,7 +153,7 @@ fun VirtualKeyboardModalBottomSheet(
                 if (backspacesCount > 0) {
                     repeat(backspacesCount) {
                         sendKeyboardKeyReport(RemoteButtonProperties.KeyboardBackspaceButton.input)
-                        sendKeyboardKeyReport(com.atharok.btremote.common.utils.REMOTE_INPUT_NONE)
+                        sendKeyboardKeyReport(REMOTE_INPUT_NONE)
                     }
                 }
 
@@ -151,6 +180,7 @@ private fun StatelessKeyboardView(
     focusRequester: FocusRequester,
     text: String,
     isVoiceActive: Boolean,
+    rmsDb: Float,
     onVoiceClick: () -> Unit,
     onTextChange: (String) -> Unit,
     sendKeyboardKeyReport: (ByteArray) -> Unit,
@@ -176,13 +206,11 @@ private fun StatelessKeyboardView(
                     .focusRequester(focusRequester),
                 placeholder = { com.atharok.btremote.ui.components.TextNormalSecondary(text = stringResource(id = R.string.keyboard)) },
                 trailingIcon = {
-                    androidx.compose.material3.IconButton(onClick = onVoiceClick) {
-                        androidx.compose.material3.Icon(
-                            imageVector = if (isVoiceActive) AppIcons.Mic else AppIcons.MicOff,
-                            contentDescription = "Voice Input",
-                            tint = if (isVoiceActive) androidx.compose.material3.MaterialTheme.colorScheme.primary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    VoicePulseButton(
+                        isActive = isVoiceActive,
+                        rmsDb = rmsDb,
+                        onClick = onVoiceClick
+                    )
                 },
                 keyboardOptions = KeyboardOptions.Default.copy(
                     imeAction = ImeAction.Done
@@ -190,7 +218,7 @@ private fun StatelessKeyboardView(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         sendKeyboardKeyReport(RemoteButtonProperties.KeyboardEnterButton.input)
-                        sendKeyboardKeyReport(com.atharok.btremote.common.utils.REMOTE_INPUT_NONE)
+                        sendKeyboardKeyReport(REMOTE_INPUT_NONE)
                         if(mustClearInputField) {
                             onTextChange("")
                         }
@@ -205,6 +233,40 @@ private fun StatelessKeyboardView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(unbounded = true)
+            )
+        }
+    }
+}
+
+@Composable
+private fun VoicePulseButton(
+    isActive: Boolean,
+    rmsDb: Float,
+    onClick: () -> Unit
+) {
+    // Normalizing RMS: typically -2 to 10. Let's map it to a scale factor.
+    val normalizedRms = if (isActive) (rmsDb.coerceIn(-2f, 12f) + 2f) / 14f else 0f
+    val pulseScale by animateFloatAsState(
+        targetValue = if (isActive) 1f + (normalizedRms * 0.4f) else 1f,
+        animationSpec = tween(durationMillis = 100),
+        label = "PulseScale"
+    )
+
+    Box(contentAlignment = Alignment.Center) {
+        if (isActive) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .scale(pulseScale * 1.2f)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape)
+            )
+        }
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = if (isActive) AppIcons.Mic else AppIcons.MicOff,
+                contentDescription = "Voice Input",
+                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.scale(if (isActive) 1.1f else 1f)
             )
         }
     }
