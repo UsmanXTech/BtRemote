@@ -13,6 +13,7 @@ import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.glance.appwidget.updateAll
@@ -40,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
 
@@ -50,6 +52,7 @@ class BluetoothHidService : Service() {
     private var currentConnectionState = STATE_DISCONNECTED
 
     override fun onCreate() {
+        Log.d("BluetoothHidService", "onCreate()")
         super.onCreate()
         notificationManager = getSystemService(NotificationManager::class.java)
         createNotificationChannel()
@@ -65,6 +68,7 @@ class BluetoothHidService : Service() {
                 startForeground(NOTIFICATION_ID, createNotification())
             }
         } catch (exception: Exception) {
+            Log.e("BluetoothHidService", "Failed to start foreground service", exception)
             stopSelf()
             return
         }
@@ -74,8 +78,24 @@ class BluetoothHidService : Service() {
             useCase = useCaseInstance
             
             launch {
-                useCaseInstance.isBluetoothServiceRunning().collect {
-                    if(!it) stopSelf()
+                var hasBeenStarted = false
+                useCaseInstance.isBluetoothServiceRunning().collect { running ->
+                    Log.d("BluetoothHidService", "isBluetoothServiceRunning: $running")
+                    if (running) {
+                        hasBeenStarted = true
+                    } else if (hasBeenStarted) {
+                        Log.d("BluetoothHidService", "Stopping service because HID profile is no longer running")
+                        stopSelf()
+                    }
+                }
+            }
+
+            // Initialization timeout: if not started after 10 seconds, stop self
+            launch {
+                kotlinx.coroutines.delay(10000L)
+                if (useCaseInstance.isBluetoothServiceRunning().value == false) {
+                    Log.w("BluetoothHidService", "Initialization timeout: HID profile failed to start")
+                    stopSelf()
                 }
             }
 
@@ -120,6 +140,7 @@ class BluetoothHidService : Service() {
     override fun onBind(intent: Intent?): IBinder = Binder()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("BluetoothHidService", "onStartCommand()")
         serviceScope.launch {
             // Ensure useCase is initialized before calling
             if (useCase == null) {
