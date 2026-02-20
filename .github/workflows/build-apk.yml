@@ -11,11 +11,6 @@ on:
       - 'settings.gradle.kts'
       - 'gradle.properties'
       - 'gradlew'
-    paths-ignore:
-      - '.github/workflows/**'
-      - '**.md'
-      - 'LICENSE'
-      - '.gitignore'
 
 jobs:
   build:
