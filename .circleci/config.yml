@@ -1,0 +1,43 @@
+version: 2.1
+
+# Define executors for reuse
+executors:
+  android-executor:
+    docker:
+      - image: cimg/android:2024.01 # Current stable Android image with JDK 17
+    resource_class: large # Standard free tier resource class for Android
+
+jobs:
+  build:
+    executor: android-executor
+    steps:
+      - checkout
+
+      # Restore gradle cache
+      - restore_cache:
+          key: v1-gradle-{{ checksum "build.gradle.kts" }}-{{ checksum "app/build.gradle.kts" }}
+
+      - run:
+          name: Set permissions for gradlew
+          command: chmod +x gradlew
+
+      - run:
+          name: Build Debug APK
+          command: ./gradlew assembleDebug --stacktrace
+
+      # Save gradle cache
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-gradle-{{ checksum "build.gradle.kts" }}-{{ checksum "app/build.gradle.kts" }}
+
+      # Store the built APK
+      - store_artifacts:
+          path: app/build/outputs/apk/default/debug/
+          destination: apks
+
+workflows:
+  version: 2
+  build-workflow:
+    jobs:
+      - build
