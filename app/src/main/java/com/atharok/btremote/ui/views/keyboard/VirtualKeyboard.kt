@@ -60,8 +60,33 @@ fun VirtualKeyboardModalBottomSheet(
             mustClearInputField = mustClearInputField,
             focusRequester = focusRequester,
             text = textState.value,
-            onTextChange = {
-                textState.value = it
+            onTextChange = { newText ->
+                val oldText = textState.value
+                
+                // Live writing logic:
+                // 1. Find common prefix
+                var commonPrefixLength = 0
+                val minLength = minOf(oldText.length, newText.length)
+                while (commonPrefixLength < minLength && oldText[commonPrefixLength] == newText[commonPrefixLength]) {
+                    commonPrefixLength++
+                }
+
+                // 2. Send backspaces for removed characters after common prefix
+                val backspacesCount = oldText.length - commonPrefixLength
+                if (backspacesCount > 0) {
+                    repeat(backspacesCount) {
+                        sendKeyboardKeyReport(RemoteButtonProperties.KeyboardBackspaceButton.input)
+                        sendKeyboardKeyReport(com.atharok.btremote.common.utils.REMOTE_INPUT_NONE)
+                    }
+                }
+
+                // 3. Send new characters after common prefix
+                val addedText = newText.substring(commonPrefixLength)
+                if (addedText.isNotEmpty()) {
+                    sendTextReport(addedText, false)
+                }
+
+                textState.value = newText
             },
             sendKeyboardKeyReport = sendKeyboardKeyReport,
             sendTextReport = sendTextReport,
@@ -105,7 +130,8 @@ private fun StatelessKeyboardView(
                 ),
                 keyboardActions = KeyboardActions(
                     onDone = {
-                        sendTextReport(text, true)
+                        sendKeyboardKeyReport(RemoteButtonProperties.KeyboardEnterButton.input)
+                        sendKeyboardKeyReport(com.atharok.btremote.common.utils.REMOTE_INPUT_NONE)
                         if(mustClearInputField) {
                             onTextChange("")
                         }
@@ -118,6 +144,7 @@ private fun StatelessKeyboardView(
                 contentDescription = stringResource(id = R.string.send),
                 touchDown = {},
                 touchUp = {
+                    // Send button now acts as a manual resync or just Enter
                     sendTextReport(text, false)
                     if(mustClearInputField) {
                         onTextChange("")

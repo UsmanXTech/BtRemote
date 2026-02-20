@@ -15,9 +15,28 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
+
+private data class TextReportRequest(
+    val text: String,
+    val virtualKeyboardLayout: VirtualKeyboardLayout,
+    val shouldSendEnter: Boolean
+)
+
 class RemoteViewModel(
     private val useCase: RemoteUseCase
 ): ViewModel() {
+
+    private val textReportChannel = Channel<TextReportRequest>(Channel.UNLIMITED)
+
+    init {
+        viewModelScope.launch(Dispatchers.Default) {
+            textReportChannel.receiveAsFlow().collect { request ->
+                useCase.sendTextReport(request.text, request.virtualKeyboardLayout, request.shouldSendEnter)
+            }
+        }
+    }
 
     // ---- Settings ----
 
@@ -48,12 +67,7 @@ class RemoteViewModel(
     val sendKeyboardReport: (ByteArray) -> Unit = { bytes -> sendReport(KEYBOARD_REPORT_ID, bytes) }
 
     // Text (Keyboard)
-    private var sendTextJob: Job? = null
     val sendTextReport: (String, VirtualKeyboardLayout, Boolean) -> Unit = { text, virtualKeyboardLayout, shouldSendEnter ->
-        if(sendTextJob?.isActive != true) {
-            sendTextJob = viewModelScope.launch(Dispatchers.Default) {
-                useCase.sendTextReport(text, virtualKeyboardLayout, shouldSendEnter)
-            }
-        }
+        textReportChannel.trySend(TextReportRequest(text, virtualKeyboardLayout, shouldSendEnter))
     }
 }
