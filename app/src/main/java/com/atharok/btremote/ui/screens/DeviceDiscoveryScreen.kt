@@ -3,6 +3,9 @@ package com.atharok.btremote.ui.screens
 import android.bluetooth.BluetoothHidDevice
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -232,7 +235,8 @@ private fun DiscoveredDevicesListView(
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = contentPadding
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
     ) {
         item {
             Column(
@@ -252,7 +256,11 @@ private fun DiscoveredDevicesListView(
                         TextNormalSecondary(
                             text = stringResource(id = R.string.available_devices),
                         )
-                        if(isDiscovering) {
+                        AnimatedVisibility(
+                            visible = isDiscovering,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.5.dp
@@ -274,8 +282,8 @@ private fun DiscoveredDevicesListView(
                 icon = device.imageVector,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { connectToDevice(device.macAddress) }
-                    .padding(dimensionResource(id = R.dimen.padding_max))
+                    .padding(horizontal = dimensionResource(id = R.dimen.padding_max)),
+                onClick = { connectToDevice(device.macAddress) }
             )
         }
     }

@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -515,6 +518,8 @@ private fun KeyboardModalBottomSheet(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun TopBarActions(
     navigateToSettings: () -> Unit,
     disconnectDevice: () -> Unit,
@@ -528,27 +533,32 @@ private fun TopBarActions(
     isHelpBottomSheetVisible: Boolean,
     onHelpBottomSheetVisibleChanged: (Boolean) -> Unit
 ) {
-    FadeAnimatedContent(targetState = navigationToggle) {
-        when (it) {
-            NavigationToggle.MOUSE -> {
-                BasicIconButton(
-                    onClick = {
-                        onNavigationToggleChanged(NavigationToggle.DIRECTION)
-                    },
-                    icon = AppIcons.Controller,
-                    contentDescription = stringResource(id = R.string.direction_arrows),
-                )
-            }
-
-            NavigationToggle.DIRECTION -> {
-                BasicIconButton(
-                    onClick = {
-                        onNavigationToggleChanged(NavigationToggle.MOUSE)
-                    },
-                    icon = AppIcons.Mouse,
-                    contentDescription = stringResource(id = R.string.mouse),
-                )
-            }
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier.padding(end = dimensionResource(id = R.dimen.padding_small))
+    ) {
+        SegmentedButton(
+            selected = navigationToggle == NavigationToggle.DIRECTION,
+            onClick = { onNavigationToggleChanged(NavigationToggle.DIRECTION) },
+            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            icon = {}
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = AppIcons.Controller,
+                contentDescription = stringResource(id = R.string.direction_arrows),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        SegmentedButton(
+            selected = navigationToggle == NavigationToggle.MOUSE,
+            onClick = { onNavigationToggleChanged(NavigationToggle.MOUSE) },
+            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            icon = {}
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = AppIcons.Mouse,
+                contentDescription = stringResource(id = R.string.mouse),
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 

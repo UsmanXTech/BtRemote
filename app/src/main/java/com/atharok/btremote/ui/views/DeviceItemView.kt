@@ -27,40 +27,81 @@ import com.atharok.btremote.ui.components.TextNormal
 import com.atharok.btremote.ui.components.TextNormalSecondary
 import com.atharok.btremote.ui.theme.surfaceElevationHigh
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
+import com.atharok.btremote.R
+import com.atharok.btremote.common.utils.AppIcons
+import com.atharok.btremote.ui.components.BasicDropdownMenuItem
+import com.atharok.btremote.ui.components.DefaultElevatedCard
+import com.atharok.btremote.ui.components.MoreOverflowMenu
+import com.atharok.btremote.ui.components.TextMedium
+import com.atharok.btremote.ui.components.TextNormal
+import com.atharok.btremote.ui.components.TextNormalSecondary
+import com.atharok.btremote.ui.theme.surfaceElevationHigh
+import com.atharok.btremote.ui.theme.surfaceElevationMedium
+
 @Composable
 fun DeviceItemView(
     name: String,
     macAddress: String,
     icon: ImageVector,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_large))
+    DefaultElevatedCard(
+        modifier = modifier
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        elevation = surfaceElevationMedium(),
+        shape = RoundedCornerShape(dimensionResource(id = R.dimen.card_corner_radius))
     ) {
-        Image(
-            imageVector = icon,
-            contentDescription = "",
+        Row(
             modifier = Modifier
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(dimensionResource(id = R.dimen.padding_medium)),
-            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onPrimary)
-        )
-
-        Column(
-            modifier = Modifier,
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_min))
+                .fillMaxWidth()
+                .padding(dimensionResource(id = R.dimen.padding_max)),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_large))
         ) {
-            TextMedium(
-                text = name,
-                maxLines = 1
+            Image(
+                imageVector = icon,
+                contentDescription = "",
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(dimensionResource(id = R.dimen.padding_medium)),
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onPrimaryContainer)
             )
-            TextNormalSecondary(
-                text = macAddress,
-                maxLines = 1
-            )
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_min))
+            ) {
+                TextMedium(
+                    text = name,
+                    maxLines = 1
+                )
+                TextNormalSecondary(
+                    text = macAddress,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

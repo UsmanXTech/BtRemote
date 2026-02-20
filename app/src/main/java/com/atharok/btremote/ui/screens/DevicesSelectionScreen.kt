@@ -291,7 +291,8 @@ private fun DevicesListView(
 ) {
     LazyColumn(
         modifier = modifier,
-        contentPadding = contentPadding
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_medium))
     ) {
         item {
             InfoView(
@@ -317,7 +318,7 @@ private fun DevicesListView(
                         )
                 )
             }
-            items(favoriteDevices) { device ->
+            items(favoriteDevices, key = { it.macAddress }) { device ->
                 DeviceItemView(
                     name = device.name,
                     macAddress = device.macAddress,
@@ -331,8 +332,8 @@ private fun DevicesListView(
                     unpair = { unpairDevice(InternalDevice(device.name, device.macAddress)) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { connectDevice(device.macAddress) }
-                        .padding(dimensionResource(id = R.dimen.padding_max))
+                        .padding(horizontal = dimensionResource(id = R.dimen.padding_max)),
+                    onClick = { connectDevice(device.macAddress) }
                 )
             }
         }
@@ -351,7 +352,7 @@ private fun DevicesListView(
                         )
                 )
             }
-            items(nonFavoriteDevices) { device ->
+            items(nonFavoriteDevices, key = { it.macAddress }) { device ->
                 DeviceItemView(
                     name = device.name,
                     macAddress = device.macAddress,
@@ -365,8 +366,8 @@ private fun DevicesListView(
                     unpair = { unpairDevice(InternalDevice(device.name, device.macAddress)) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { connectDevice(device.macAddress) }
-                        .padding(dimensionResource(id = R.dimen.padding_max))
+                        .padding(horizontal = dimensionResource(id = R.dimen.padding_max)),
+                    onClick = { connectDevice(device.macAddress) }
                 )
             }
         }
