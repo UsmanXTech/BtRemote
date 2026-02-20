@@ -96,7 +96,7 @@ private fun DeviceDiscoveryScreen(
     modifier: Modifier = Modifier,
     deviceDiscoveryViewModel: DeviceDiscoveryViewModel = koinViewModel()
 ) {
-    val scannedDevices = deviceDiscoveryViewModel.scannedDevices
+    val scannedDevices by deviceDiscoveryViewModel.scannedDevicesFlow.collectAsStateWithLifecycle()
     val isDiscovering: Boolean by deviceDiscoveryViewModel.isDiscoveringFlow.collectAsStateWithLifecycle()
     var showHelpBottomSheet: Boolean by remember { mutableStateOf(false) }
 

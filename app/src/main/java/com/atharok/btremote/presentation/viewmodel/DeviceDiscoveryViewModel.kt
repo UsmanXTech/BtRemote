@@ -23,7 +23,10 @@ class DeviceDiscoveryViewModel(
 
     // ---- Discover Devices ----
 
+    @Deprecated("Use scannedDevicesFlow instead", ReplaceWith("scannedDevicesFlow"))
     val scannedDevices: SnapshotStateList<DeviceEntity> get() = useCase.getScannedDevices()
+
+    val scannedDevicesFlow: StateFlow<List<DeviceEntity>> get() = useCase.getScannedDevicesState()
 
     fun registerBluetoothScannerReceiver() {
         useCase.registerBluetoothScannerReceiver()
