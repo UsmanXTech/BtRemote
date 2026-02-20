@@ -123,8 +123,9 @@ private fun StatelessKeyboardView(
                 value = text,
                 onValueChange = onTextChange,
                 modifier = Modifier
-                    .weight(4f)
+                    .fillMaxWidth()
                     .focusRequester(focusRequester),
+                placeholder = { com.atharok.btremote.ui.components.TextNormalSecondary(text = stringResource(id = R.string.keyboard)) },
                 keyboardOptions = KeyboardOptions.Default.copy(
                     imeAction = ImeAction.Done
                 ),
@@ -137,23 +138,6 @@ private fun StatelessKeyboardView(
                         }
                     }
                 )
-            )
-
-            IconRawButton(
-                image = AppIcons.Send,
-                contentDescription = stringResource(id = R.string.send),
-                touchDown = {},
-                touchUp = {
-                    // Send button now acts as a manual resync or just Enter
-                    sendTextReport(text, false)
-                    if(mustClearInputField) {
-                        onTextChange("")
-                    }
-                },
-                modifier = Modifier.weight(1f).fillMaxSize(),
-                shape = CircleShape,
-                iconFillFraction = 1f,
-                iconPadding = dimensionResource(id = R.dimen.padding_medium)
             )
         }
 
