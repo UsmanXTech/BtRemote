@@ -89,407 +89,280 @@ fun SettingsScreen(
 
         val horizontalPadding = dimensionResource(id = R.dimen.padding_max)
         val verticalPadding = dimensionResource(id = R.dimen.padding_large)
+        val cardPadding = dimensionResource(id = R.dimen.padding_medium)
 
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
+                .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            verticalArrangement = Arrangement.spacedBy(verticalPadding)
         ) {
             // ---- Appearance ----
+            SettingsSectionCard {
+                SettingsTitle(
+                    text = stringResource(id = R.string.appearance),
+                    icon = AppIcons.Appearance,
+                    iconDescription = stringResource(id = R.string.appearance),
+                    modifier = Modifier.padding(cardPadding)
+                )
 
-            SettingsTitle(
-                text = stringResource(id = R.string.appearance),
-                icon = AppIcons.Appearance,
-                iconDescription = stringResource(id = R.string.appearance),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+                SettingsListDialog(
+                    title = R.string.theme,
+                    dialogMessage = null,
+                    value = appearanceSettings.theme,
+                    onValueChange = { settingsViewModel.changeTheme(it) },
+                    items = ThemeEntity.entries,
+                    convertValueToString = { context.getString(it.stringRes) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
 
-            SettingsListDialog(
-                title = R.string.theme,
-                dialogMessage = null,
-                value = appearanceSettings.theme,
-                onValueChange = { settingsViewModel.changeTheme(it) },
-                items = ThemeEntity.entries,
-                convertValueToString = { context.getString(it.stringRes) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.theme_black),
-                secondaryText = stringResource(id = R.string.theme_black_oled_info),
-                checked = appearanceSettings.useBlackColorForDarkTheme,
-                onCheckedChange = { settingsViewModel.setUseBlackColorForDarkTheme(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            if(isDynamicColorsAvailable()) {
                 SettingsSwitch(
-                    primaryText = stringResource(id = R.string.dynamic_colors),
+                    primaryText = stringResource(id = R.string.theme_black),
+                    secondaryText = stringResource(id = R.string.theme_black_oled_info),
+                    checked = appearanceSettings.useBlackColorForDarkTheme,
+                    onCheckedChange = { settingsViewModel.setUseBlackColorForDarkTheme(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
+
+                if(isDynamicColorsAvailable()) {
+                    SettingsSwitch(
+                        primaryText = stringResource(id = R.string.dynamic_colors),
+                        secondaryText = null,
+                        checked = appearanceSettings.useDynamicColors,
+                        onCheckedChange = { settingsViewModel.setUseDynamicColors(it) },
+                        modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                    )
+                }
+
+                SettingsSwitch(
+                    primaryText = stringResource(id = R.string.full_screen),
                     secondaryText = null,
-                    checked = appearanceSettings.useDynamicColors,
-                    onCheckedChange = { settingsViewModel.setUseDynamicColors(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = horizontalPadding,
-                            vertical = verticalPadding
-                        )
+                    checked = appearanceSettings.useFullScreen,
+                    onCheckedChange = { settingsViewModel.saveUseFullScreen(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
                 )
             }
 
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.full_screen),
-                secondaryText = null,
-                checked = appearanceSettings.useFullScreen,
-                onCheckedChange = { settingsViewModel.saveUseFullScreen(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = verticalPadding)
-            )
-
             // ---- Remote ----
+            SettingsSectionCard {
+                SettingsTitle(
+                    text = stringResource(id = R.string.remote),
+                    icon = AppIcons.RemoteControl,
+                    iconDescription = stringResource(id = R.string.remote),
+                    modifier = Modifier.padding(cardPadding)
+                )
 
-            SettingsTitle(
-                text = stringResource(id = R.string.remote),
-                icon = AppIcons.RemoteControl,
-                iconDescription = stringResource(id = R.string.remote),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+                SettingsSwitch(
+                    primaryText = stringResource(id = R.string.use_minimalist_interface),
+                    secondaryText = stringResource(id = R.string.minimalist_interface_info),
+                    checked = remoteSettings.useMinimalistRemote,
+                    onCheckedChange = { settingsViewModel.saveUseMinimalistRemote(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
 
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.use_minimalist_interface),
-                secondaryText = stringResource(id = R.string.minimalist_interface_info),
-                checked = remoteSettings.useMinimalistRemote,
-                onCheckedChange = { settingsViewModel.saveUseMinimalistRemote(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+                SettingsSwitch(
+                    primaryText = stringResource(id = R.string.use_mouse_navigation_by_default),
+                    secondaryText = null,
+                    checked = remoteSettings.useMouseNavigationByDefault,
+                    onCheckedChange = { settingsViewModel.saveUseMouseNavigationByDefault(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
 
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.use_mouse_navigation_by_default),
-                secondaryText = null,
-                checked = remoteSettings.useMouseNavigationByDefault,
-                onCheckedChange = { settingsViewModel.saveUseMouseNavigationByDefault(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+                SettingsRemoteNavigationSelector(
+                    remoteNavigation = remoteSettings.remoteNavigationEntity,
+                    onRemoteNavigationChange = { settingsViewModel.saveRemoteNavigation(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
 
-            SettingsRemoteNavigationSelector(
-                remoteNavigation = remoteSettings.remoteNavigationEntity,
-                onRemoteNavigationChange = { settingsViewModel.saveRemoteNavigation(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.use_enter_for_selection_title),
-                secondaryText = stringResource(id = R.string.use_enter_for_selection_summary),
-                checked = remoteSettings.useEnterForSelection,
-                onCheckedChange = { settingsViewModel.saveUseEnterForSelection(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = verticalPadding)
-            )
+                SettingsSwitch(
+                    primaryText = stringResource(id = R.string.use_enter_for_selection_title),
+                    secondaryText = stringResource(id = R.string.use_enter_for_selection_summary),
+                    checked = remoteSettings.useEnterForSelection,
+                    onCheckedChange = { settingsViewModel.saveUseEnterForSelection(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
+            }
 
             // ---- Mouse ----
+            SettingsSectionCard {
+                SettingsTitle(
+                    text = stringResource(id = R.string.mouse),
+                    icon = AppIcons.Mouse,
+                    iconDescription = stringResource(id = R.string.mouse),
+                    modifier = Modifier.padding(cardPadding)
+                )
 
-            SettingsTitle(
-                text = stringResource(id = R.string.mouse),
-                icon = AppIcons.Mouse,
-                iconDescription = stringResource(id = R.string.mouse),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+                SettingsSlider(
+                    value = remoteSettings.mouseSpeed,
+                    onValueChange = { settingsViewModel.saveMouseSpeed(it) },
+                    info = stringResource(id = R.string.mouse_pointer_speed) + " (x${remoteSettings.mouseSpeed})",
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
 
-            SettingsSlider(
-                value = remoteSettings.mouseSpeed,
-                onValueChange = { settingsViewModel.saveMouseSpeed(it) },
-                info = stringResource(id = R.string.mouse_pointer_speed) + " (x${remoteSettings.mouseSpeed})",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+                SettingsSwitch(
+                    primaryText = stringResource(id = R.string.invert_mouse_scrolling_direction),
+                    secondaryText = null,
+                    checked = remoteSettings.shouldInvertMouseScrollingDirection,
+                    onCheckedChange = { settingsViewModel.saveInvertMouseScrollingDirection(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
 
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.invert_mouse_scrolling_direction),
-                secondaryText = null,
-                checked = remoteSettings.shouldInvertMouseScrollingDirection,
-                onCheckedChange = { settingsViewModel.saveInvertMouseScrollingDirection(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.use_the_gyroscope_to_control_the_mouse),
-                secondaryText = null,
-                checked = remoteSettings.useGyroscope,
-                onCheckedChange = { settingsViewModel.saveUseGyroscope(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = verticalPadding)
-            )
+                SettingsSwitch(
+                    primaryText = stringResource(id = R.string.use_the_gyroscope_to_control_the_mouse),
+                    secondaryText = null,
+                    checked = remoteSettings.useGyroscope,
+                    onCheckedChange = { settingsViewModel.saveUseGyroscope(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
+            }
 
             // ---- Keyboard and Input Field ----
+            SettingsSectionCard {
+                SettingsTitle(
+                    text = stringResource(id = R.string.keyboard_and_input_field),
+                    icon = AppIcons.Keyboard,
+                    iconDescription = stringResource(id = R.string.keyboard),
+                    modifier = Modifier.padding(cardPadding)
+                )
 
-            SettingsTitle(
-                text = stringResource(id = R.string.keyboard_and_input_field),
-                icon = AppIcons.Keyboard,
-                iconDescription = stringResource(id = R.string.keyboard),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+                SettingsListDialog(
+                    title = R.string.keyboard_language,
+                    dialogMessage = stringResource(id = R.string.keyboard_language_info),
+                    value = remoteSettings.keyboardLanguage,
+                    onValueChange = { settingsViewModel.changeKeyboardLanguage(it) },
+                    items = KeyboardLanguage.entries.sortedBy { context.getString(it.language) },
+                    convertValueToString = { context.getString(it.language) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
 
-            SettingsListDialog(
-                title = R.string.keyboard_language,
-                dialogMessage = stringResource(id = R.string.keyboard_language_info),
-                value = remoteSettings.keyboardLanguage,
-                onValueChange = { settingsViewModel.changeKeyboardLanguage(it) },
-                items = KeyboardLanguage.entries.sortedBy { context.getString(it.language) },
-                convertValueToString = { context.getString(it.language) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+                SettingsSwitch(
+                    primaryText = stringResource(id = R.string.advanced_keyboard),
+                    secondaryText = null,
+                    checked = remoteSettings.useAdvancedKeyboard,
+                    onCheckedChange = { settingsViewModel.saveUseAdvancedKeyboard(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
 
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.advanced_keyboard),
-                secondaryText = null,
-                checked = remoteSettings.useAdvancedKeyboard,
-                onCheckedChange = { settingsViewModel.saveUseAdvancedKeyboard(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            FadeAnimatedContent(
-                targetState = remoteSettings.useAdvancedKeyboard
-            ) {
-                if(it) {
-                    SettingsSwitch(
-                        primaryText = stringResource(id = R.string.integrate_advanced_keyboard_into_the_view),
-                        secondaryText = null,
-                        checked = remoteSettings.useAdvancedKeyboardIntegrated,
-                        onCheckedChange = { value -> settingsViewModel.saveUseAdvancedKeyboardIntegrated(value) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                horizontal = horizontalPadding,
-                                vertical = verticalPadding
-                            )
-                    )
-                } else {
-                    SettingsSwitch(
-                        primaryText = stringResource(id = R.string.clear_input_field),
-                        secondaryText = null,
-                        checked = remoteSettings.mustClearInputField,
-                        onCheckedChange = { value -> settingsViewModel.saveMustClearInputField(value) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                horizontal = horizontalPadding,
-                                vertical = verticalPadding
-                            )
-                    )
+                FadeAnimatedContent(
+                    targetState = remoteSettings.useAdvancedKeyboard
+                ) {
+                    if(it) {
+                        SettingsSwitch(
+                            primaryText = stringResource(id = R.string.integrate_advanced_keyboard_into_the_view),
+                            secondaryText = null,
+                            checked = remoteSettings.useAdvancedKeyboardIntegrated,
+                            onCheckedChange = { value -> settingsViewModel.saveUseAdvancedKeyboardIntegrated(value) },
+                            modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                        )
+                    } else {
+                        SettingsSwitch(
+                            primaryText = stringResource(id = R.string.clear_input_field),
+                            secondaryText = null,
+                            checked = remoteSettings.mustClearInputField,
+                            onCheckedChange = { value -> settingsViewModel.saveMustClearInputField(value) },
+                            modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                        )
+                    }
                 }
             }
 
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = verticalPadding)
-            )
-
             // ---- Advanced Options ----
+            SettingsSectionCard {
+                SettingsTitle(
+                    text = stringResource(id = R.string.advanced_options),
+                    icon = AppIcons.Settings,
+                    iconDescription = stringResource(id = R.string.advanced_options),
+                    modifier = Modifier.padding(cardPadding)
+                )
 
-            SettingsTitle(
-                text = stringResource(id = R.string.advanced_options),
-                icon = AppIcons.Settings,
-                iconDescription = stringResource(id = R.string.advanced_options),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            SettingsSwitch(
-                primaryText = stringResource(id = R.string.hide_bluetooth_activation_button),
-                secondaryText = null,
-                checked = hideBluetoothActivationButton,
-                onCheckedChange = { settingsViewModel.saveHideBluetoothActivationButton(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = verticalPadding)
-            )
-
-            // ---- About ----
-
-            SettingsTitle(
-                text = stringResource(id = R.string.about),
-                icon = AppIcons.Info,
-                iconDescription = stringResource(id = R.string.about),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val activity = LocalActivity.current
-                SettingsText(
-                    text = stringResource(id = R.string.language),
-                    modifier = Modifier
-                        .clickable {
-                            activity?.startActivity(
-                                Intent(
-                                    Settings.ACTION_APP_LOCALE_SETTINGS,
-                                    Uri.fromParts("package", activity.packageName, null)
-                                )
-                            )
-                        }
-                        .fillMaxWidth()
-                        .padding(
-                            horizontal = horizontalPadding,
-                            vertical = verticalPadding
-                        )
+                SettingsSwitch(
+                    primaryText = stringResource(id = R.string.hide_bluetooth_activation_button),
+                    secondaryText = null,
+                    checked = hideBluetoothActivationButton,
+                    onCheckedChange = { settingsViewModel.saveHideBluetoothActivationButton(it) },
+                    modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
                 )
             }
 
-            SettingsText(
-                text = stringResource(id = R.string.third_party_library),
-                modifier = Modifier
-                    .clickable {
-                        navigateToThirdLibrariesScreen()
-                    }
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    )
-            )
+            // ---- About ----
+            SettingsSectionCard {
+                SettingsTitle(
+                    text = stringResource(id = R.string.about),
+                    icon = AppIcons.Info,
+                    iconDescription = stringResource(id = R.string.about),
+                    modifier = Modifier.padding(cardPadding)
+                )
 
-            SettingsText(
-                text = stringResource(id = R.string.website),
-                modifier = Modifier
-                    .clickable {
-                        uriHandler.openUri(WEB_SITE_LINK)
-                    }
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val activity = LocalActivity.current
+                    SettingsText(
+                        text = stringResource(id = R.string.language),
+                        modifier = Modifier
+                            .clickable {
+                                activity?.startActivity(
+                                    Intent(
+                                        Settings.ACTION_APP_LOCALE_SETTINGS,
+                                        Uri.fromParts("package", activity.packageName, null)
+                                    )
+                                )
+                            }
+                            .fillMaxWidth()
+                            .padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
                     )
-            )
+                }
 
-            Column(
-                modifier = Modifier
-                    .clickable {
-                        uriHandler.openUri(SOURCE_CODE_LINK)
-                    }
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = horizontalPadding,
-                        vertical = verticalPadding
-                    ),
-                verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_min))
-            ) {
-                TextNormal(text = stringResource(id = R.string.source_code))
-                TextNormalSecondary(text = stringResource(id = R.string.code_version, context.getAppVersion()))
+                SettingsText(
+                    text = stringResource(id = R.string.third_party_library),
+                    modifier = Modifier
+                        .clickable {
+                            navigateToThirdLibrariesScreen()
+                        }
+                        .fillMaxWidth()
+                        .padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
+
+                SettingsText(
+                    text = stringResource(id = R.string.website),
+                    modifier = Modifier
+                        .clickable {
+                            uriHandler.openUri(WEB_SITE_LINK)
+                        }
+                        .fillMaxWidth()
+                        .padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
+                )
+
+                Column(
+                    modifier = Modifier
+                        .clickable {
+                            uriHandler.openUri(SOURCE_CODE_LINK)
+                        }
+                        .fillMaxWidth()
+                        .padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small)),
+                    verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_min))
+                ) {
+                    TextNormal(text = stringResource(id = R.string.source_code))
+                    TextNormalSecondary(text = stringResource(id = R.string.code_version, context.getAppVersion()))
+                }
             }
         }
     }
+}
+
+@Composable
+private fun SettingsSectionCard(
+    content: @Composable () -> Unit
+) {
+    com.atharok.btremote.ui.components.DefaultElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            Column(
+                modifier = Modifier.padding(vertical = dimensionResource(id = R.dimen.padding_small))
+            ) {
+                content()
+            }
+        }
+    )
 }
 
 
