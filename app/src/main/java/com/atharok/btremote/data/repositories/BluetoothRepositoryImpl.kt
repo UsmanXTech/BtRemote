@@ -29,6 +29,8 @@ class BluetoothRepositoryImpl(
 
     override fun getScannedDevices(): SnapshotStateList<DeviceEntity> = bluetoothScanner.scannedDevices
 
+    override fun getScannedDevicesState(): StateFlow<List<DeviceEntity>> = bluetoothScanner.scannedDevicesState
+
     override fun registerBluetoothScannerReceiver() {
         bluetoothScanner.registerBluetoothScannerReceiver()
     }

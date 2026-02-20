@@ -17,6 +17,7 @@ interface BluetoothRepository {
     // ---- BluetoothScanner ----
 
     fun getScannedDevices(): SnapshotStateList<DeviceEntity>
+    fun getScannedDevicesState(): StateFlow<List<DeviceEntity>>
     fun registerBluetoothScannerReceiver()
     fun unregisterBluetoothScannerReceiver()
     fun startDiscovery(): Boolean

@@ -51,6 +51,12 @@ class BluetoothHidService : Service() {
         super.onCreate()
         createNotificationChannel()
 
+        try {
+            startForeground(NOTIFICATION_ID, createNotification())
+        } catch (exception: Exception) {
+            stopSelf()
+        }
+
         serviceScope.launch {
             useCase.isBluetoothServiceRunning().collect {
                 if(!it) stopSelf()
@@ -97,13 +103,8 @@ class BluetoothHidService : Service() {
     override fun onBind(intent: Intent?): IBinder = Binder()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        try {
-            startForeground(NOTIFICATION_ID, createNotification())
-            serviceScope.launch {
-                startBluetoothHidProfile()
-            }
-        } catch (exception: Exception) {
-            stopSelf()
+        serviceScope.launch {
+            startBluetoothHidProfile()
         }
 
         return super.onStartCommand(intent, flags, startId)
