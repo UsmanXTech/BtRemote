@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.atharok.btremote.common.extensions.dataStore
+import com.atharok.btremote.common.utils.DEFAULT_GYROSCOPE_SENSITIVITY
+import com.atharok.btremote.common.utils.DEFAULT_HAPTIC_FEEDBACK
 import com.atharok.btremote.common.utils.DEFAULT_KEYBOARD_LANGUAGE
 import com.atharok.btremote.common.utils.DEFAULT_MOUSE_SPEED
 import com.atharok.btremote.common.utils.DEFAULT_MUST_CLEAR_INPUT_FIELD
