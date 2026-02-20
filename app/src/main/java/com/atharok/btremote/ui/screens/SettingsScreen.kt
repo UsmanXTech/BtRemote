@@ -284,67 +284,6 @@ fun SettingsScreen(
                     modifier = Modifier.padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
                 )
             }
-
-            // ---- About ----
-            SettingsSectionCard {
-                SettingsTitle(
-                    text = stringResource(id = R.string.about),
-                    icon = AppIcons.Info,
-                    iconDescription = stringResource(id = R.string.about),
-                    modifier = Modifier.padding(cardPadding)
-                )
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    val activity = LocalActivity.current
-                    SettingsText(
-                        text = stringResource(id = R.string.language),
-                        modifier = Modifier
-                            .clickable {
-                                activity?.startActivity(
-                                    Intent(
-                                        Settings.ACTION_APP_LOCALE_SETTINGS,
-                                        Uri.fromParts("package", activity.packageName, null)
-                                    )
-                                )
-                            }
-                            .fillMaxWidth()
-                            .padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
-                    )
-                }
-
-                SettingsText(
-                    text = stringResource(id = R.string.third_party_library),
-                    modifier = Modifier
-                        .clickable {
-                            navigateToThirdLibrariesScreen()
-                        }
-                        .fillMaxWidth()
-                        .padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
-                )
-
-                SettingsText(
-                    text = stringResource(id = R.string.website),
-                    modifier = Modifier
-                        .clickable {
-                            uriHandler.openUri(WEB_SITE_LINK)
-                        }
-                        .fillMaxWidth()
-                        .padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small))
-                )
-
-                Column(
-                    modifier = Modifier
-                        .clickable {
-                            uriHandler.openUri(SOURCE_CODE_LINK)
-                        }
-                        .fillMaxWidth()
-                        .padding(horizontal = cardPadding, vertical = dimensionResource(R.dimen.padding_small)),
-                    verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_min))
-                ) {
-                    TextNormal(text = stringResource(id = R.string.source_code))
-                    TextNormalSecondary(text = stringResource(id = R.string.code_version, context.getAppVersion()))
-                }
-            }
         }
     }
 }
