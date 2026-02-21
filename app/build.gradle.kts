@@ -52,7 +52,11 @@ android {
     productFlavors {
         create("default") {
             dimension = "version"
-            signingConfig = signingConfigs.getByName("release")
+            // Only assign signingConfig if the storeFile is actually set
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile != null) {
+                signingConfig = releaseSigning
+            }
         }
         create("gplay") {
             dimension = "version"
