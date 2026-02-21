@@ -15,3 +15,6 @@
 local.properties
 *.skill
 skills/
+
+.gemini/
+gha-creds-*.json
