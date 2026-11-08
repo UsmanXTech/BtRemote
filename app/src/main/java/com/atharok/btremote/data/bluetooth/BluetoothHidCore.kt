@@ -175,6 +175,9 @@ class BluetoothHidCore(
         connectionTimeoutJob = connectionScope.launch {
             delay(CONNECTION_TIMEOUT_MS)
             if (_deviceHidConnectionState.value.state == BluetoothProfile.STATE_CONNECTING) {
+                bluetoothHidDevice?.let { hidDevice ->
+                    if (checkBluetoothConnectPermission(context)) disconnectDevice(hidDevice)
+                }
                 bluetoothDevice = null
                 _deviceHidConnectionState.value = DeviceHidConnectionState()
             }
