@@ -95,12 +95,16 @@ private fun DeviceDiscoveryScreen(
     val isDiscovering: Boolean by deviceDiscoveryViewModel.isDiscoveringFlow.collectAsStateWithLifecycle()
     var showHelpBottomSheet: Boolean by remember { mutableStateOf(false) }
 
-    DisposableEffect(Unit) {
-        deviceDiscoveryViewModel.registerBluetoothScannerReceiver()
-        deviceDiscoveryViewModel.startDiscovery()
+    DisposableEffect(deviceDiscoveryViewModel) {
+        val receiverRegistered = deviceDiscoveryViewModel.registerBluetoothScannerReceiver()
+        if (receiverRegistered) {
+            deviceDiscoveryViewModel.startDiscovery()
+        }
         onDispose {
             deviceDiscoveryViewModel.cancelDiscovery()
-            deviceDiscoveryViewModel.unregisterBluetoothScannerReceiver()
+            if (receiverRegistered) {
+                deviceDiscoveryViewModel.unregisterBluetoothScannerReceiver()
+            }
         }
     }
 
