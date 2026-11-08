@@ -51,17 +51,19 @@ class BluetoothScanner(
         }
     }
 
-    fun registerBluetoothScannerReceiver() {
-        if (receiverRegistered) return
-        try {
+    fun registerBluetoothScannerReceiver(): Boolean {
+        if (receiverRegistered) return true
+        return try {
             context.registerReceiver(
                 bluetoothScannerReceiver,
                 IntentFilter(BluetoothDevice.ACTION_FOUND)
             )
             receiverRegistered = true
+            true
         } catch (exception: RuntimeException) {
             Log.w(TAG, "Unable to register Bluetooth discovery receiver", exception)
             receiverRegistered = false
+            false
         }
     }
 
