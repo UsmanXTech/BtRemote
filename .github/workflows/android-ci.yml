@@ -36,7 +36,8 @@ jobs:
             exit 1
           fi
           yes | "$SDKMANAGER" --licenses
-          "$SDKMANAGER" "platform-tools" "platforms;android-37" "build-tools;37.0.0"
+          # API 37 is currently published as the preview/canary package android-37.0.
+          "$SDKMANAGER" --channel=3 "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
 
       - name: Run unit tests and assemble debug APK
         run: ./gradlew testGplayDebugUnitTest assembleGplayDebug --stacktrace
