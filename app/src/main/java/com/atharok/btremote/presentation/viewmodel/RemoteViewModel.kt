@@ -25,28 +25,29 @@ class RemoteViewModel(
         private const val TAG = "RemoteViewModel"
     }
 
-    // ---- Settings ----
-
     val remoteSettingsFlow: Flow<RemoteSettings> = useCase.remoteSettingsFlow
 
-    // ---- Connection ----
-
     fun disconnectDevice(): Boolean {
-        sendTextJob?.cancel()
-        sendTextJob = null
+        val activeTextJob = sendTextJob
+        if (activeTextJob?.isActive == true) {
+            // Let the text sender's finally block attempt key-up before disconnecting.
+            activeTextJob.cancel()
+            sendTextJob = null
+            viewModelScope.launch {
+                activeTextJob.join()
+                useCase.disconnectDevice()
+            }
+            return true
+        }
         return useCase.disconnectDevice()
     }
 
-    // ---- Send ----
-
     fun sendReport(id: Int, bytes: ByteArray): Boolean = useCase.sendReport(id, bytes)
 
-    // Remote
     val sendRemoteReport: (ByteArray) -> Unit = { bytes ->
         sendReport(REMOTE_REPORT_ID, bytes)
     }
 
-    // Mouse
     val sendMouseReport: (MouseAction, Float, Float, Float) -> Unit = { input, x, y, wheel ->
         val xInt = x.roundToInt().coerceIn(-127, 127)
         val yInt = y.roundToInt().coerceIn(-127, 127)
@@ -55,12 +56,10 @@ class RemoteViewModel(
         sendReport(MOUSE_REPORT_ID, bytes)
     }
 
-    // Keyboard
     val sendKeyboardReport: (ByteArray) -> Unit = { bytes ->
         sendReport(KEYBOARD_REPORT_ID, bytes)
     }
 
-    // Text (Keyboard)
     private var sendTextJob: Job? = null
 
     val sendTextReport: (String, VirtualKeyboardLayout, Boolean) -> Unit =
