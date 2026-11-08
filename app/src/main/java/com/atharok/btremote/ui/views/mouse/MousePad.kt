@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shape
@@ -33,6 +34,11 @@ fun MousePad(
     val tapFingerCount = remember { Ref(0) }
     val tapAccumulatedDrift = remember { Ref(0f) }
     val scrollAccumulator = remember { Ref(0f) }
+    val currentMouseSpeed = rememberUpdatedState(mouseSpeed)
+    val currentScrollSpeed = rememberUpdatedState(scrollSpeed)
+    val currentSendMouseAction = rememberUpdatedState(sendMouseAction)
+    val currentSendMousePosition = rememberUpdatedState(sendMousePosition)
+    val currentSendMouseScroll = rememberUpdatedState(sendMouseScroll)
 
     DefaultElevatedCard(
         modifier = modifier,
@@ -49,9 +55,9 @@ fun MousePad(
                             val inputChanges = event.changes
 
                             doMove(
-                                mouseSpeed = mouseSpeed,
+                                mouseSpeed = currentMouseSpeed.value,
                                 inputChanges = inputChanges,
-                                sendMousePosition = sendMousePosition
+                                sendMousePosition = currentSendMousePosition.value
                             )
 
                             doTap(
@@ -62,14 +68,14 @@ fun MousePad(
                                 onTapFingerCountChange = { tapFingerCount.value = it },
                                 tapAccumulatedDrift = tapAccumulatedDrift.value,
                                 onTapAccumulatedDriftChange = { tapAccumulatedDrift.value = it },
-                                sendMouseAction = sendMouseAction
+                                sendMouseAction = currentSendMouseAction.value
                             )
 
                             doWheel(
                                 inputChanges = inputChanges,
-                                scrollSpeed = scrollSpeed,
+                                scrollSpeed = currentScrollSpeed.value,
                                 scrollAccumulator = scrollAccumulator,
-                                sendMouseScroll = sendMouseScroll
+                                sendMouseScroll = currentSendMouseScroll.value
                             )
 
                             inputChanges.forEach { it.consume() }
@@ -90,7 +96,9 @@ private fun doMove(
 ) {
     if(inputChanges.size != 1) return
     val delta: Offset = inputChanges.first().positionChange()
-    sendMousePosition(delta.x * mouseSpeed, delta.y * mouseSpeed)
+    if (delta != Offset.Zero) {
+        sendMousePosition(delta.x * mouseSpeed, delta.y * mouseSpeed)
+    }
 }
 
 private fun doTap(
@@ -152,10 +160,7 @@ private fun doWheel(
     if(inputChanges.size != 2) return
 
     // Average the delta Y across all fingers using positionChange() for consistency
-    val avgDeltaY = inputChanges
-        .map { it.positionChange().y }
-        .average()
-        .toFloat()
+    val avgDeltaY = (inputChanges[0].positionChange().y + inputChanges[1].positionChange().y) / 2f
 
     if (avgDeltaY == 0f) return // Nothing to scroll
 
