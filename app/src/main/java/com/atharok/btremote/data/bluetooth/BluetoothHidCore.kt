@@ -27,6 +27,7 @@ class BluetoothHidCore(
     private val hidSettings: BluetoothHidDeviceAppSdpSettings
 ) {
     private var bluetoothHidDevice: BluetoothHidDevice? = null
+    private var profileProxyRequested = false
 
     private val _isBluetoothServiceRunning: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isBluetoothServiceRunning: StateFlow<Boolean> = _isBluetoothServiceRunning
@@ -40,7 +41,13 @@ class BluetoothHidCore(
 
     fun startBluetoothHidProfile(autoConnectDeviceAddress: String) {
         this.autoConnectDeviceAddress = autoConnectDeviceAddress
-        adapter?.getProfileProxy(context, serviceListener, BluetoothProfile.HID_DEVICE)
+        if (profileProxyRequested || adapter == null) return
+
+        profileProxyRequested = adapter.getProfileProxy(
+            context,
+            serviceListener,
+            BluetoothProfile.HID_DEVICE
+        )
     }
 
     fun stopBluetoothHidProfile() {
@@ -52,26 +59,39 @@ class BluetoothHidCore(
             adapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
         }
         bluetoothHidDevice = null
+        profileProxyRequested = false
+        bluetoothDevice = null
         _deviceHidConnectionState.value = DeviceHidConnectionState()
+        _isBluetoothHidProfileRegistered.value = false
         _isBluetoothServiceRunning.value = false
     }
 
     // ---- BluetoothProfile.ServiceListener implementation ----
 
     private val serviceListener = object : ServiceListener {
-        override fun onServiceConnected(i: Int, bluetoothProfile: BluetoothProfile?) {
-            if(i == BluetoothProfile.HID_DEVICE) {
-                bluetoothHidDevice = bluetoothProfile as? BluetoothHidDevice?
-                bluetoothHidDevice?.let { hidDevice ->
-                    if (checkBluetoothConnectPermission(context)) {
-                        _isBluetoothHidProfileRegistered.value = hidDevice.registerApp(hidSettings, null, null, Runnable::run, callback)
-                    }
+        override fun onServiceConnected(profile: Int, bluetoothProfile: BluetoothProfile?) {
+            if (profile != BluetoothProfile.HID_DEVICE) return
+
+            bluetoothHidDevice = bluetoothProfile as? BluetoothHidDevice
+            bluetoothHidDevice?.let { hidDevice ->
+                if (checkBluetoothConnectPermission(context)) {
+                    _isBluetoothHidProfileRegistered.value =
+                        hidDevice.registerApp(hidSettings, null, null, Runnable::run, callback)
                 }
             }
-            _isBluetoothServiceRunning.value = true
+            _isBluetoothServiceRunning.value = bluetoothHidDevice != null
         }
 
-        override fun onServiceDisconnected(i: Int) {}
+        override fun onServiceDisconnected(profile: Int) {
+            if (profile != BluetoothProfile.HID_DEVICE) return
+
+            bluetoothHidDevice = null
+            profileProxyRequested = false
+            bluetoothDevice = null
+            _isBluetoothHidProfileRegistered.value = false
+            _isBluetoothServiceRunning.value = false
+            _deviceHidConnectionState.value = DeviceHidConnectionState()
+        }
     }
 
     // ---- BluetoothHidDevice.Callback implementation ----
@@ -81,7 +101,7 @@ class BluetoothHidCore(
         override fun onAppStatusChanged(pluggedDevice: BluetoothDevice?, registered: Boolean) {
             super.onAppStatusChanged(pluggedDevice, registered)
             _isBluetoothHidProfileRegistered.value = registered
-            if(registered && isMacAddress(autoConnectDeviceAddress)) {
+            if (registered && isMacAddress(autoConnectDeviceAddress)) {
                 connectDevice(autoConnectDeviceAddress)
             }
         }
@@ -118,47 +138,58 @@ class BluetoothHidCore(
 
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
     private fun connectDevice(hidDevice: BluetoothHidDevice, deviceAddress: String): Boolean {
-        var isConnected = false
         bluetoothDevice = adapter?.getRemoteDevice(deviceAddress.uppercase(Locale.getDefault()))
-        bluetoothDevice?.let {
-            isConnected = hidDevice.connect(it)
-        }
-        return isConnected
+        return bluetoothDevice?.let { hidDevice.connect(it) } ?: false
     }
 
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
     private fun disconnectDevice(hidDevice: BluetoothHidDevice): Boolean {
-        var isDisconnected = false
-        bluetoothDevice?.let {
-            // disconnect() is called twice because, during my tests on a Pixel 3a, the state
-            // changes to DISCONNECTING but never to DISCONNECTED if the call is made only once.
-            // This error occurs only on this device and not on the others I tested. It seems to
-            // be due to a bug in the library or the device.
-            hidDevice.disconnect(it)
-            isDisconnected = hidDevice.disconnect(it)
-        }
+        val device = bluetoothDevice ?: return false
+
+        // Keep the Pixel 3a workaround documented above: that device may require
+        // a second disconnect request to reach DISCONNECTED.
+        hidDevice.disconnect(device)
+        val isDisconnected = hidDevice.disconnect(device)
         bluetoothDevice = null
         return isDisconnected
     }
 
     // ---- StateFlow ----
 
-    private val _deviceHidConnectionState: MutableStateFlow<DeviceHidConnectionState> = MutableStateFlow(
-        DeviceHidConnectionState()
-    )
+    private val _deviceHidConnectionState: MutableStateFlow<DeviceHidConnectionState> =
+        MutableStateFlow(DeviceHidConnectionState())
     val deviceHidConnectionState: StateFlow<DeviceHidConnectionState> = _deviceHidConnectionState
 
     // ---- Send Report ----
 
     fun sendReport(id: Int, bytes: ByteArray): Boolean {
-        var success = false
-        bluetoothDevice?.let { device ->
-            bluetoothHidDevice?.let { hidDevice ->
-                if (checkBluetoothConnectPermission(context)) {
-                    success = hidDevice.sendReport(device, id, bytes)
-                }
+        val device = bluetoothDevice ?: return false
+        val hidDevice = bluetoothHidDevice ?: return false
+        return checkBluetoothConnectPermission(context) && hidDevice.sendReport(device, id, bytes)
+    }
+
+    private suspend fun sendKeyAndRelease(
+        hidDevice: BluetoothHidDevice,
+        device: BluetoothDevice,
+        keyReport: ByteArray
+    ): Boolean {
+        var success = true
+        var keyDownAttempted = false
+
+        try {
+            keyDownAttempted = true
+            success = hidDevice.sendReport(device, KEYBOARD_REPORT_ID, keyReport)
+            delay(DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS)
+        } finally {
+            // Always attempt a key-up report, including when the coroutine is
+            // cancelled during the key-down delay.
+            if (keyDownAttempted &&
+                !hidDevice.sendReport(device, KEYBOARD_REPORT_ID, REMOTE_INPUT_NONE)
+            ) {
+                success = false
             }
         }
+
         return success
     }
 
@@ -167,27 +198,33 @@ class BluetoothHidCore(
         virtualKeyboardLayout: VirtualKeyboardLayout,
         shouldSendEnter: Boolean
     ): Boolean {
-        var success = false
-        bluetoothDevice?.let { device ->
-            bluetoothHidDevice?.let { hidDevice ->
-                if (checkBluetoothConnectPermission(context)) {
-                    success = true
-                    text.forEach {
-                        if(!hidDevice.sendReport(device, KEYBOARD_REPORT_ID, virtualKeyboardLayout.getKeyboardKey(it))) {
-                            success = false
-                        }
-                        delay(DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS)
-                        hidDevice.sendReport(device, KEYBOARD_REPORT_ID, REMOTE_INPUT_NONE)
-                        delay(DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS)
-                    }
-                    if(shouldSendEnter) {
-                        hidDevice.sendReport(device, KEYBOARD_REPORT_ID, RemoteButtonProperties.KeyboardEnterButton.input)
-                        delay(DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS)
-                        hidDevice.sendReport(device, KEYBOARD_REPORT_ID, REMOTE_INPUT_NONE)
-                    }
-                }
+        val device = bluetoothDevice ?: return false
+        val hidDevice = bluetoothHidDevice ?: return false
+        if (!checkBluetoothConnectPermission(context)) return false
+
+        var success = true
+        text.forEach { character ->
+            if (!sendKeyAndRelease(
+                    hidDevice,
+                    device,
+                    virtualKeyboardLayout.getKeyboardKey(character)
+                )
+            ) {
+                success = false
             }
+            delay(DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS)
         }
+
+        if (shouldSendEnter &&
+            !sendKeyAndRelease(
+                hidDevice,
+                device,
+                RemoteButtonProperties.KeyboardEnterButton.input
+            )
+        ) {
+            success = false
+        }
+
         return success
     }
 }
