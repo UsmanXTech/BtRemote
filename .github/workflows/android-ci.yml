@@ -1,0 +1,40 @@
+name: Android CI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Android SDK packages
+        run: |
+          SDKMANAGER="$(find "${ANDROID_SDK_ROOT}/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Android sdkmanager not found under ${ANDROID_SDK_ROOT}/cmdline-tools"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses
+          # API 37 is currently published as the preview/canary package android-37.0.
+          "$SDKMANAGER" --channel=3 "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+
+      - name: Run unit tests and assemble debug APK
+        run: ./gradlew testGplayDebugUnitTest assembleGplayDebug --stacktrace

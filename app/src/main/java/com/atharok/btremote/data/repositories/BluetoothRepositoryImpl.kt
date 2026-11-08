@@ -21,7 +21,7 @@ class BluetoothRepositoryImpl(
     override fun isBluetoothEnabled(): Boolean = bluetoothStatus.isBluetoothEnabled()
 
     override fun getScannedDevices(): StateFlow<List<DeviceEntity>> = bluetoothScanner.scannedDevices
-    override fun registerBluetoothScannerReceiver() = bluetoothScanner.registerBluetoothScannerReceiver()
+    override fun registerBluetoothScannerReceiver(): Boolean = bluetoothScanner.registerBluetoothScannerReceiver()
     override fun unregisterBluetoothScannerReceiver() = bluetoothScanner.unregisterBluetoothScannerReceiver()
     override fun startDiscovery(): Boolean = bluetoothScanner.startDiscoveryDevices()
     override fun cancelDiscovery(): Boolean = bluetoothScanner.cancelDiscoveryDevices()

@@ -26,40 +26,55 @@ class BluetoothScanner(
     private val bluetoothScannerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != BluetoothDevice.ACTION_FOUND) return
+            if (!checkBluetoothConnectPermission(this@BluetoothScanner.context)) return
 
-            intent.parcelable(
-                BluetoothDevice.EXTRA_DEVICE,
-                BluetoothDevice::class.java
-            )?.let { device ->
-                if (!checkBluetoothConnectPermission(this@BluetoothScanner.context)) return
-                val address = device.address
-                if (_scannedDevices.value.none { it.macAddress == address }) {
-                    val entity = DeviceEntity(
-                        name = device.name ?: "Unknown device",
-                        macAddress = address,
-                        category = device.bluetoothClass.majorDeviceClass
-                    )
-                    _scannedDevices.value = _scannedDevices.value + entity
+            try {
+                intent.parcelable(
+                    BluetoothDevice.EXTRA_DEVICE,
+                    BluetoothDevice::class.java
+                )?.let { device ->
+                    val address = device.address ?: return
+                    if (_scannedDevices.value.none { it.macAddress == address }) {
+                        val entity = DeviceEntity(
+                            name = device.name ?: "Unknown device",
+                            macAddress = address,
+                            category = device.bluetoothClass?.majorDeviceClass ?: 0
+                        )
+                        _scannedDevices.value = _scannedDevices.value + entity
+                    }
                 }
+            } catch (exception: SecurityException) {
+                Log.w(TAG, "Bluetooth permission revoked during discovery callback", exception)
+            } catch (exception: IllegalStateException) {
+                Log.w(TAG, "Bluetooth device unavailable during discovery callback", exception)
             }
         }
     }
 
-    fun registerBluetoothScannerReceiver() {
-        if (receiverRegistered) return
-        context.registerReceiver(
-            bluetoothScannerReceiver,
-            IntentFilter(BluetoothDevice.ACTION_FOUND)
-        )
-        receiverRegistered = true
+    fun registerBluetoothScannerReceiver(): Boolean {
+        if (receiverRegistered) return true
+        return try {
+            context.registerReceiver(
+                bluetoothScannerReceiver,
+                IntentFilter(BluetoothDevice.ACTION_FOUND)
+            )
+            receiverRegistered = true
+            true
+        } catch (exception: RuntimeException) {
+            Log.w(TAG, "Unable to register Bluetooth discovery receiver", exception)
+            receiverRegistered = false
+            false
+        }
     }
 
     fun unregisterBluetoothScannerReceiver() {
         if (!receiverRegistered) return
         try {
             context.unregisterReceiver(bluetoothScannerReceiver)
-        } catch (e: IllegalArgumentException) {
-            Log.w("BluetoothScanner", "Receiver was already unregistered", e)
+        } catch (exception: IllegalArgumentException) {
+            Log.w(TAG, "Bluetooth discovery receiver was already unregistered", exception)
+        } catch (exception: SecurityException) {
+            Log.w(TAG, "Unable to unregister Bluetooth discovery receiver", exception)
         } finally {
             receiverRegistered = false
         }
@@ -67,15 +82,33 @@ class BluetoothScanner(
 
     fun startDiscoveryDevices(): Boolean {
         if (!checkBluetoothScanPermission(context)) return false
-        val started = adapter?.startDiscovery() == true
+        val started = try {
+            adapter?.startDiscovery() == true
+        } catch (exception: SecurityException) {
+            Log.w(TAG, "Bluetooth scan permission revoked before discovery start", exception)
+            false
+        } catch (exception: IllegalStateException) {
+            Log.w(TAG, "Bluetooth adapter is not ready for discovery", exception)
+            false
+        }
         if (started) _scannedDevices.value = emptyList()
         return started
     }
 
-    fun cancelDiscoveryDevices(): Boolean =
-        if (checkBluetoothScanPermission(context)) {
+    fun cancelDiscoveryDevices(): Boolean {
+        if (!checkBluetoothScanPermission(context)) return false
+        return try {
             adapter?.cancelDiscovery() == true
-        } else {
+        } catch (exception: SecurityException) {
+            Log.w(TAG, "Bluetooth scan permission revoked before discovery cancellation", exception)
+            false
+        } catch (exception: IllegalStateException) {
+            Log.w(TAG, "Bluetooth adapter is not ready to cancel discovery", exception)
             false
         }
+    }
+
+    private companion object {
+        const val TAG = "BluetoothScanner"
+    }
 }

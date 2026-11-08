@@ -18,7 +18,7 @@ class DeviceDiscoveryViewModel(
 
     val scannedDevices: StateFlow<List<DeviceEntity>> get() = useCase.getScannedDevices()
 
-    fun registerBluetoothScannerReceiver() = useCase.registerBluetoothScannerReceiver()
+    fun registerBluetoothScannerReceiver(): Boolean = useCase.registerBluetoothScannerReceiver()
     fun unregisterBluetoothScannerReceiver() = useCase.unregisterBluetoothScannerReceiver()
 
     private val _isDiscoveringFlow = MutableStateFlow(false)

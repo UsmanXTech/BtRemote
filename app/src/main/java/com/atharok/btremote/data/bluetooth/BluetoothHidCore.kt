@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothHidDeviceAppSdpSettings
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothProfile.ServiceListener
 import android.content.Context
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.atharok.btremote.common.utils.DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS
 import com.atharok.btremote.common.utils.KEYBOARD_REPORT_ID
@@ -16,6 +17,7 @@ import com.atharok.btremote.common.utils.isMacAddress
 import com.atharok.btremote.domain.entities.DeviceHidConnectionState
 import com.atharok.btremote.domain.entities.remoteInput.RemoteButtonProperties
 import com.atharok.btremote.domain.entities.remoteInput.keyboard.virtualKeyboard.VirtualKeyboardLayout
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,69 +35,115 @@ class BluetoothHidCore(
 ) {
     private var bluetoothHidDevice: BluetoothHidDevice? = null
     private var profileProxyRequested = false
+    private var profileGeneration = 0L
+    private var connectionAttemptId = 0L
     private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var connectionTimeoutJob: Job? = null
+    private var bluetoothDevice: BluetoothDevice? = null
+    private var autoConnectDeviceAddress: String = ""
 
-    private val _isBluetoothServiceRunning: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    private val _isBluetoothServiceRunning = MutableStateFlow(false)
     val isBluetoothServiceRunning: StateFlow<Boolean> = _isBluetoothServiceRunning
 
-    private val _isBluetoothHidProfileRegistered: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    private val _isBluetoothHidProfileRegistered = MutableStateFlow(false)
     val isBluetoothHidProfileRegistered: StateFlow<Boolean> = _isBluetoothHidProfileRegistered
 
-    private var autoConnectDeviceAddress: String = ""
+    private val _deviceHidConnectionState = MutableStateFlow(DeviceHidConnectionState())
+    val deviceHidConnectionState: StateFlow<DeviceHidConnectionState> = _deviceHidConnectionState
 
     // ---- HID Profile ----
 
     fun startBluetoothHidProfile(autoConnectDeviceAddress: String) {
         this.autoConnectDeviceAddress = autoConnectDeviceAddress
         if (profileProxyRequested || adapter == null) return
+        if (!checkBluetoothConnectPermission(context)) {
+            _isBluetoothServiceRunning.value = false
+            _isBluetoothHidProfileRegistered.value = false
+            return
+        }
 
-        profileProxyRequested = adapter.getProfileProxy(
-            context,
-            serviceListener,
-            BluetoothProfile.HID_DEVICE
-        )
+        val generation = ++profileGeneration
+        profileProxyRequested = true
+        val accepted = try {
+            adapter.getProfileProxy(context, createServiceListener(generation), BluetoothProfile.HID_DEVICE)
+        } catch (exception: RuntimeException) {
+            Log.w(TAG, "Failed to request HID profile proxy", exception)
+            false
+        }
+        if (!accepted && generation == profileGeneration) {
+            profileProxyRequested = false
+            _isBluetoothServiceRunning.value = false
+        }
     }
 
     fun stopBluetoothHidProfile() {
+        ++profileGeneration
+        ++connectionAttemptId
         cancelConnectionTimeout()
-        bluetoothHidDevice?.let { hidDevice ->
-            if (checkBluetoothConnectPermission(context)) {
-                disconnectDevice(hidDevice)
-                hidDevice.unregisterApp()
-            }
-            adapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
-        }
+
+        val hidDevice = bluetoothHidDevice
         bluetoothHidDevice = null
         profileProxyRequested = false
+
+        if (hidDevice != null) {
+            if (checkBluetoothConnectPermission(context)) {
+                safeBluetoothCall("disconnect HID device", false) {
+                    disconnectDevice(hidDevice)
+                }
+                safeBluetoothCall("unregister HID app", false) {
+                    hidDevice.unregisterApp()
+                }
+            }
+            safeBluetoothCall("close HID profile proxy", Unit) {
+                adapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
+            }
+        }
+
         bluetoothDevice = null
         _deviceHidConnectionState.value = DeviceHidConnectionState()
         _isBluetoothHidProfileRegistered.value = false
         _isBluetoothServiceRunning.value = false
     }
 
-    // ---- BluetoothProfile.ServiceListener implementation ----
-
-    private val serviceListener = object : ServiceListener {
+    private fun createServiceListener(generation: Long) = object : ServiceListener {
         override fun onServiceConnected(profile: Int, bluetoothProfile: BluetoothProfile?) {
             if (profile != BluetoothProfile.HID_DEVICE) return
+            val hidDevice = bluetoothProfile as? BluetoothHidDevice ?: return
 
-            bluetoothHidDevice = bluetoothProfile as? BluetoothHidDevice
-            bluetoothHidDevice?.let { hidDevice ->
-                if (checkBluetoothConnectPermission(context)) {
-                    _isBluetoothHidProfileRegistered.value =
-                        hidDevice.registerApp(hidSettings, null, null, Runnable::run, callback)
+            // Android may deliver a profile callback after the service was stopped.
+            if (generation != profileGeneration || !profileProxyRequested) {
+                safeBluetoothCall("close stale HID profile proxy", Unit) {
+                    adapter?.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice)
                 }
+                return
             }
-            _isBluetoothServiceRunning.value = bluetoothHidDevice != null
+
+            bluetoothHidDevice = hidDevice
+            _isBluetoothServiceRunning.value = true
+            if (!checkBluetoothConnectPermission(context)) {
+                _isBluetoothHidProfileRegistered.value = false
+                return
+            }
+
+            val registered = safeBluetoothCall("register HID app", false) {
+                hidDevice.registerApp(
+                    hidSettings,
+                    null,
+                    null,
+                    Runnable::run,
+                    createHidCallback(generation)
+                )
+            }
+            _isBluetoothHidProfileRegistered.value = registered
         }
 
         override fun onServiceDisconnected(profile: Int) {
-            if (profile != BluetoothProfile.HID_DEVICE) return
+            if (profile != BluetoothProfile.HID_DEVICE || generation != profileGeneration) return
 
             bluetoothHidDevice = null
             profileProxyRequested = false
             bluetoothDevice = null
+            ++connectionAttemptId
             cancelConnectionTimeout()
             _isBluetoothHidProfileRegistered.value = false
             _isBluetoothServiceRunning.value = false
@@ -103,12 +151,11 @@ class BluetoothHidCore(
         }
     }
 
-    // ---- BluetoothHidDevice.Callback implementation ----
-
-    private val callback = object : BluetoothHidDevice.Callback() {
-
+    private fun createHidCallback(generation: Long) = object : BluetoothHidDevice.Callback() {
         override fun onAppStatusChanged(pluggedDevice: BluetoothDevice?, registered: Boolean) {
             super.onAppStatusChanged(pluggedDevice, registered)
+            if (generation != profileGeneration || !profileProxyRequested) return
+
             _isBluetoothHidProfileRegistered.value = registered
             if (registered && isMacAddress(autoConnectDeviceAddress)) {
                 connectDevice(autoConnectDeviceAddress)
@@ -117,71 +164,109 @@ class BluetoothHidCore(
 
         override fun onConnectionStateChanged(device: BluetoothDevice?, state: Int) {
             super.onConnectionStateChanged(device, state)
-            if (checkBluetoothConnectPermission(context)) {
-                _deviceHidConnectionState.value = DeviceHidConnectionState(state, device?.name ?: "")
-                if (state == BluetoothProfile.STATE_CONNECTED || state == BluetoothProfile.STATE_DISCONNECTED) {
-                    cancelConnectionTimeout()
-                    if (state == BluetoothProfile.STATE_DISCONNECTED) bluetoothDevice = null
+            if (generation != profileGeneration || !profileProxyRequested) return
+            if (!checkBluetoothConnectPermission(context)) {
+                _deviceHidConnectionState.value = DeviceHidConnectionState()
+                return
+            }
+
+            // A connection callback can arrive after the connection timeout. Do not
+            // resurrect a timed-out connection as active; ask Android to disconnect it.
+            val currentTarget = bluetoothDevice
+            if (state == BluetoothProfile.STATE_CONNECTED &&
+                device != null &&
+                currentTarget == null
+            ) {
+                safeBluetoothCall("disconnect late HID connection", false) {
+                    bluetoothHidDevice?.disconnect(device)
                 }
+                return
+            }
+
+            val deviceName = safeBluetoothCall("read HID device name", "") {
+                device?.name ?: ""
+            }
+            _deviceHidConnectionState.value = DeviceHidConnectionState(state, deviceName)
+
+            if (state == BluetoothProfile.STATE_CONNECTED) {
+                cancelConnectionTimeout()
+                if (device != null) bluetoothDevice = device
+            } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
+                cancelConnectionTimeout()
+                bluetoothDevice = null
             }
         }
     }
 
     // ---- Device Connection ----
 
-    private var bluetoothDevice: BluetoothDevice? = null
-
     fun connectDevice(deviceAddress: String): Boolean {
         if (!checkBluetoothConnectPermission(context)) return false
+        if (!isMacAddress(deviceAddress)) return false
+
         val hidDevice = bluetoothHidDevice ?: return false
         val currentState = _deviceHidConnectionState.value.state
-        if (currentState == BluetoothProfile.STATE_CONNECTING || currentState == BluetoothProfile.STATE_CONNECTED) {
+        if (currentState == BluetoothProfile.STATE_CONNECTING ||
+            currentState == BluetoothProfile.STATE_CONNECTED
+        ) {
             return false
         }
         return connectDevice(hidDevice, deviceAddress)
     }
 
     fun disconnectDevice(): Boolean {
-        if (checkBluetoothConnectPermission(context)) {
-            bluetoothHidDevice?.let {
-                return disconnectDevice(it)
-            }
+        if (!checkBluetoothConnectPermission(context)) return false
+        val hidDevice = bluetoothHidDevice ?: return false
+        ++connectionAttemptId
+        cancelConnectionTimeout()
+        val disconnected = safeBluetoothCall("disconnect HID device", false) {
+            disconnectDevice(hidDevice)
         }
-        return false
+        if (disconnected) {
+            bluetoothDevice = null
+            _deviceHidConnectionState.value = DeviceHidConnectionState()
+        }
+        return disconnected
     }
 
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
     private fun connectDevice(hidDevice: BluetoothHidDevice, deviceAddress: String): Boolean {
-        val device = try {
+        val device = safeBluetoothCall("resolve Bluetooth device", null as BluetoothDevice?) {
             adapter?.getRemoteDevice(deviceAddress.uppercase(Locale.ROOT))
-        } catch (_: IllegalArgumentException) {
-            null
         } ?: return false
 
+        val deviceName = safeBluetoothCall("read Bluetooth device name", "") {
+            device.name ?: ""
+        }
         bluetoothDevice = device
         _deviceHidConnectionState.value = DeviceHidConnectionState(
             BluetoothProfile.STATE_CONNECTING,
-            device.name ?: ""
+            deviceName
         )
 
-        val accepted = hidDevice.connect(device)
+        val attemptId = ++connectionAttemptId
+        val accepted = safeBluetoothCall("connect HID device", false) {
+            hidDevice.connect(device)
+        }
         if (!accepted) {
             bluetoothDevice = null
             _deviceHidConnectionState.value = DeviceHidConnectionState()
             return false
         }
 
-        connectionTimeoutJob?.cancel()
+        cancelConnectionTimeout()
         connectionTimeoutJob = connectionScope.launch {
             delay(CONNECTION_TIMEOUT_MS)
-            if (_deviceHidConnectionState.value.state == BluetoothProfile.STATE_CONNECTING) {
-                bluetoothHidDevice?.let { hidDevice ->
-                    if (checkBluetoothConnectPermission(context)) disconnectDevice(hidDevice)
+            if (attemptId == connectionAttemptId &&
+                _deviceHidConnectionState.value.state == BluetoothProfile.STATE_CONNECTING
+            ) {
+                safeBluetoothCall("disconnect timed-out HID device", false) {
+                    hidDevice.disconnect(device)
                 }
                 bluetoothDevice = null
                 _deviceHidConnectionState.value = DeviceHidConnectionState()
             }
-            connectionTimeoutJob = null
+            if (attemptId == connectionAttemptId) connectionTimeoutJob = null
         }
         return true
     }
@@ -195,26 +280,38 @@ class BluetoothHidCore(
     private fun disconnectDevice(hidDevice: BluetoothHidDevice): Boolean {
         val device = bluetoothDevice ?: return false
 
-        // Keep the Pixel 3a workaround documented above: that device may require
-        // a second disconnect request to reach DISCONNECTED.
-        hidDevice.disconnect(device)
-        val isDisconnected = hidDevice.disconnect(device)
-        bluetoothDevice = null
-        return isDisconnected
+        // Preserve the existing Pixel 3a workaround: the second disconnect result
+        // is used because some devices need a repeated request.
+        safeBluetoothCall("first HID disconnect request", false) {
+            hidDevice.disconnect(device)
+        }
+        return safeBluetoothCall("second HID disconnect request", false) {
+            hidDevice.disconnect(device)
+        }
     }
-
-    // ---- StateFlow ----
-
-    private val _deviceHidConnectionState: MutableStateFlow<DeviceHidConnectionState> =
-        MutableStateFlow(DeviceHidConnectionState())
-    val deviceHidConnectionState: StateFlow<DeviceHidConnectionState> = _deviceHidConnectionState
 
     // ---- Send Report ----
 
     fun sendReport(id: Int, bytes: ByteArray): Boolean {
+        if (!checkBluetoothConnectPermission(context)) return false
+        if (_deviceHidConnectionState.value.state != BluetoothProfile.STATE_CONNECTED) return false
         val device = bluetoothDevice ?: return false
         val hidDevice = bluetoothHidDevice ?: return false
-        return checkBluetoothConnectPermission(context) && hidDevice.sendReport(device, id, bytes)
+        return safeBluetoothCall("send HID report", false) {
+            hidDevice.sendReport(device, id, bytes)
+        }
+    }
+
+    private fun safeSendReport(
+        hidDevice: BluetoothHidDevice,
+        device: BluetoothDevice,
+        reportId: Int,
+        bytes: ByteArray
+    ): Boolean {
+        if (!checkBluetoothConnectPermission(context)) return false
+        return safeBluetoothCall("send keyboard HID report", false) {
+            hidDevice.sendReport(device, reportId, bytes)
+        }
     }
 
     private suspend fun sendKeyAndRelease(
@@ -222,28 +319,24 @@ class BluetoothHidCore(
         device: BluetoothDevice,
         keyReport: ByteArray
     ): Boolean {
-        var success = true
+        var success = false
         var keyDownAttempted = false
 
         try {
             keyDownAttempted = true
-            success = hidDevice.sendReport(device, KEYBOARD_REPORT_ID, keyReport)
+            success = safeSendReport(hidDevice, device, KEYBOARD_REPORT_ID, keyReport)
             delay(DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS)
         } finally {
-            // Always attempt a key-up report, including when the coroutine is
-            // cancelled during the key-down delay.
+            // Always attempt key-up even if the delay is cancelled. Bluetooth errors
+            // are contained by safeSendReport so they cannot mask cancellation.
             if (keyDownAttempted &&
-                !hidDevice.sendReport(device, KEYBOARD_REPORT_ID, REMOTE_INPUT_NONE)
+                !safeSendReport(hidDevice, device, KEYBOARD_REPORT_ID, REMOTE_INPUT_NONE)
             ) {
                 success = false
             }
         }
 
         return success
-    }
-
-    private companion object {
-        const val CONNECTION_TIMEOUT_MS = 15_000L
     }
 
     suspend fun sendTextReport(
@@ -251,33 +344,64 @@ class BluetoothHidCore(
         virtualKeyboardLayout: VirtualKeyboardLayout,
         shouldSendEnter: Boolean
     ): Boolean {
+        if (!checkBluetoothConnectPermission(context)) return false
+        if (_deviceHidConnectionState.value.state != BluetoothProfile.STATE_CONNECTED) return false
+
         val device = bluetoothDevice ?: return false
         val hidDevice = bluetoothHidDevice ?: return false
-        if (!checkBluetoothConnectPermission(context)) return false
-
         var success = true
-        text.forEach { character ->
-            if (!sendKeyAndRelease(
+
+        try {
+            text.forEach { character ->
+                if (!sendKeyAndRelease(
+                        hidDevice,
+                        device,
+                        virtualKeyboardLayout.getKeyboardKey(character)
+                    )
+                ) {
+                    success = false
+                }
+                delay(DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS)
+            }
+
+            if (shouldSendEnter &&
+                !sendKeyAndRelease(
                     hidDevice,
                     device,
-                    virtualKeyboardLayout.getKeyboardKey(character)
+                    RemoteButtonProperties.KeyboardEnterButton.input
                 )
             ) {
                 success = false
             }
-            delay(DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS)
-        }
-
-        if (shouldSendEnter &&
-            !sendKeyAndRelease(
-                hidDevice,
-                device,
-                RemoteButtonProperties.KeyboardEnterButton.input
-            )
-        ) {
-            success = false
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (exception: RuntimeException) {
+            Log.w(TAG, "Text HID report failed", exception)
+            return false
         }
 
         return success
+    }
+
+    private inline fun <T> safeBluetoothCall(
+        operation: String,
+        fallback: T,
+        call: () -> T
+    ): T = try {
+        call()
+    } catch (exception: SecurityException) {
+        Log.w(TAG, "Bluetooth permission/security failure: $operation", exception)
+        fallback
+    } catch (exception: IllegalArgumentException) {
+        Log.w(TAG, "Invalid Bluetooth argument: $operation", exception)
+        fallback
+    } catch (exception: IllegalStateException) {
+        Log.w(TAG, "Bluetooth stack is not ready: $operation", exception)
+        fallback
+    }
+
+    private companion object {
+        const val TAG = "BluetoothHidCore"
+        const val CONNECTION_TIMEOUT_MS = 15_000L
     }
 }
