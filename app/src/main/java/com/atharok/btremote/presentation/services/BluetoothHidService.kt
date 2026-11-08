@@ -48,6 +48,7 @@ import org.koin.android.ext.android.inject
 class BluetoothHidService : Service() {
     private val useCase: BluetoothHidServiceUseCase by inject()
     private lateinit var notificationManager: NotificationManager
+    private var notificationChannelReady = false
     private val serviceScope = CoroutineScope(
         SupervisorJob() + Dispatchers.Main.immediate +
             CoroutineExceptionHandler { _, throwable ->
@@ -108,6 +109,12 @@ class BluetoothHidService : Service() {
     override fun onBind(intent: Intent?): IBinder = Binder()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!notificationChannelReady) {
+            Log.e(TAG, "Cannot start HID service without a notification channel")
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+
         try {
             startForeground(NOTIFICATION_ID, createNotification())
             if (profileStartJob?.isActive != true) {
@@ -125,6 +132,7 @@ class BluetoothHidService : Service() {
         } catch (exception: RuntimeException) {
             Log.e(TAG, "Unable to start foreground Bluetooth service", exception)
             stopSelf(startId)
+            return START_NOT_STICKY
         }
 
         return START_STICKY
@@ -142,9 +150,10 @@ class BluetoothHidService : Service() {
             )
             channel.enableVibration(false)
             notificationManager.createNotificationChannel(channel)
+            notificationChannelReady = true
         } catch (exception: RuntimeException) {
+            notificationChannelReady = false
             Log.e(TAG, "Failed to create Bluetooth service notification channel", exception)
-            stopSelf()
         }
     }
 
