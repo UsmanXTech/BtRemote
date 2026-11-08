@@ -8,18 +8,15 @@ import com.atharok.btremote.domain.repositories.DataStoreRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 class BluetoothHidServiceUseCase(
     private val bluetoothRepository: BluetoothRepository,
     private val dataStoreRepository: DataStoreRepository
 ) {
 
-    fun startHidProfile() {
-        val autoConnectDeviceAddress: String
-        runBlocking {
-            autoConnectDeviceAddress = dataStoreRepository.getAutoConnectDeviceAddressFlow().first()
-        }
+    suspend fun startHidProfile() {
+        val autoConnectDeviceAddress =
+            dataStoreRepository.getAutoConnectDeviceAddressFlow().first()
         bluetoothRepository.startHidProfile(autoConnectDeviceAddress)
     }
 
@@ -27,29 +24,23 @@ class BluetoothHidServiceUseCase(
         bluetoothRepository.stopHidProfile()
     }
 
-    fun disconnectDevice(): Boolean {
-        return bluetoothRepository.disconnectDevice()
-    }
+    fun disconnectDevice(): Boolean = bluetoothRepository.disconnectDevice()
 
-    fun getDeviceHidConnectionState(): StateFlow<DeviceHidConnectionState> {
-        return bluetoothRepository.getDeviceHidConnectionState()
-    }
+    fun getDeviceHidConnectionState(): StateFlow<DeviceHidConnectionState> =
+        bluetoothRepository.getDeviceHidConnectionState()
 
-    fun sendReport(id: Int, bytes: ByteArray): Boolean {
-        return bluetoothRepository.sendReport(id, bytes)
-    }
+    fun sendReport(id: Int, bytes: ByteArray): Boolean =
+        bluetoothRepository.sendReport(id, bytes)
 
-    fun sendRemoteReport(bytes: ByteArray): Boolean {
-        return sendReport(REMOTE_REPORT_ID, bytes)
-    }
+    fun sendRemoteReport(bytes: ByteArray): Boolean =
+        sendReport(REMOTE_REPORT_ID, bytes)
 
-    fun sendKeyboardReport(bytes: ByteArray): Boolean {
-        return sendReport(KEYBOARD_REPORT_ID, bytes)
-    }
+    fun sendKeyboardReport(bytes: ByteArray): Boolean =
+        sendReport(KEYBOARD_REPORT_ID, bytes)
 
-    fun useEnterForSelection(): Boolean = runBlocking {
+    suspend fun useEnterForSelection(): Boolean =
         dataStoreRepository.remoteSettingsFlow.first().useEnterForSelection
-    }
 
-    fun showRemoteButtonsInNotification(): Flow<Boolean> = dataStoreRepository.showRemoteButtonsInNotification()
+    fun showRemoteButtonsInNotification(): Flow<Boolean> =
+        dataStoreRepository.showRemoteButtonsInNotification()
 }
