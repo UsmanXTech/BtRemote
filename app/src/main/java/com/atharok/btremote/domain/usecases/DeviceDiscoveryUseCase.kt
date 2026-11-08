@@ -11,7 +11,7 @@ class DeviceDiscoveryUseCase(
     fun disconnectDevice(): Boolean = bluetoothRepository.disconnectDevice()
 
     fun getScannedDevices(): StateFlow<List<DeviceEntity>> = bluetoothRepository.getScannedDevices()
-    fun registerBluetoothScannerReceiver() = bluetoothRepository.registerBluetoothScannerReceiver()
+    fun registerBluetoothScannerReceiver(): Boolean = bluetoothRepository.registerBluetoothScannerReceiver()
     fun unregisterBluetoothScannerReceiver() = bluetoothRepository.unregisterBluetoothScannerReceiver()
     fun startDiscovery(): Boolean = bluetoothRepository.startDiscovery()
     fun cancelDiscovery(): Boolean = bluetoothRepository.cancelDiscovery()
