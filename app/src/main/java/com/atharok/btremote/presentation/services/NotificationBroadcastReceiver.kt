@@ -3,17 +3,23 @@ package com.atharok.btremote.presentation.services
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.atharok.btremote.common.utils.REMOTE_INPUT_NONE
 import com.atharok.btremote.domain.entities.remoteInput.RemoteButtonProperties
 import com.atharok.btremote.domain.usecases.BluetoothHidServiceUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class NotificationBroadcastReceiver: BroadcastReceiver(), KoinComponent {
+class NotificationBroadcastReceiver : BroadcastReceiver(), KoinComponent {
 
     private val useCase: BluetoothHidServiceUseCase by inject()
 
     companion object {
+        private const val TAG = "HidNotificationReceiver"
+
         const val ACTION_VOLUME_UP = "action_volume_up"
         const val ACTION_VOLUME_DOWN = "action_volume_down"
         const val ACTION_MULTIMEDIA_PLAY_PAUSE = "action_multimedia_play_pause"
@@ -30,7 +36,7 @@ class NotificationBroadcastReceiver: BroadcastReceiver(), KoinComponent {
     }
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        when(intent?.action) {
+        when (intent?.action) {
             ACTION_VOLUME_UP -> sendRemoteReport(RemoteButtonProperties.VolumeUpButton.input)
             ACTION_VOLUME_DOWN -> sendRemoteReport(RemoteButtonProperties.VolumeDownButton.input)
             ACTION_MULTIMEDIA_PLAY_PAUSE -> sendRemoteReport(RemoteButtonProperties.PlayPauseButton.input)
@@ -40,20 +46,26 @@ class NotificationBroadcastReceiver: BroadcastReceiver(), KoinComponent {
             ACTION_RIGHT -> sendRemoteReport(RemoteButtonProperties.MenuRightButton.input)
             ACTION_UP -> sendRemoteReport(RemoteButtonProperties.MenuUpButton.input)
             ACTION_DOWN -> sendRemoteReport(RemoteButtonProperties.MenuDownButton.input)
-            ACTION_PICK -> {
-                if(useCase.useEnterForSelection()) {
+            ACTION_PICK -> sendSelectionActionAsync()
+            ACTION_BACK -> sendRemoteReport(RemoteButtonProperties.BackButton.input)
+            ACTION_HOME -> sendRemoteReport(RemoteButtonProperties.HomeButton.input)
+            ACTION_DISCONNECT -> useCase.disconnectDevice()
+        }
+    }
+
+    private fun sendSelectionActionAsync() {
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                if (useCase.useEnterForSelection()) {
                     sendKeyboardReport(RemoteButtonProperties.KeyboardEnterButton.input)
                 } else {
                     sendRemoteReport(RemoteButtonProperties.MenuPickButton.input)
                 }
-            }
-            ACTION_BACK -> sendRemoteReport(RemoteButtonProperties.BackButton.input)
-            ACTION_HOME -> sendRemoteReport(RemoteButtonProperties.HomeButton.input)
-            ACTION_DISCONNECT -> {
-                useCase.disconnectDevice()
-                /*useCase.stopHidProfile()
-                val serviceIntent = Intent(context, BluetoothHidService::class.java)
-                context?.stopService(serviceIntent)*/
+            } catch (exception: Exception) {
+                Log.w(TAG, "Unable to send selection action from notification", exception)
+            } finally {
+                pendingResult.finish()
             }
         }
     }
