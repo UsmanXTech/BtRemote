@@ -1,6 +1,7 @@
 package com.atharok.btremote.data.dataStore
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -24,6 +25,7 @@ import com.atharok.btremote.common.utils.DEFAULT_USE_GYROSCOPE
 import com.atharok.btremote.common.utils.DEFAULT_USE_MINIMALIST_REMOTE
 import com.atharok.btremote.common.utils.USE_MOUSE_NAVIGATION_BY_DEFAULT
 import com.atharok.btremote.common.utils.isDynamicColorsAvailable
+import com.atharok.btremote.common.utils.isMacAddress
 import com.atharok.btremote.domain.entities.RemoteNavigationEntity
 import com.atharok.btremote.domain.entities.remoteInput.VolumePhysicalButtonAction
 import com.atharok.btremote.domain.entities.remoteInput.keyboard.KeyboardLanguage
@@ -33,6 +35,7 @@ import com.atharok.btremote.domain.entities.settings.ThemeEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.io.IOException
 
@@ -63,6 +66,7 @@ class SettingsDataStore(private val context: Context) {
         private const val AUTO_CONNECT_DEVICE_ADDRESS_KEY = "auto_connect_device_address_key"
         private const val SHOW_REMOTE_BUTTONS_IN_NOTIFICATION_KEY = "show_remote_buttons_in_notification_key"
         private const val HIDE_BLUETOOTH_ACTIVATION_BUTTON_KEY = "hide_bluetooth_activation_button_key"
+        private const val TAG = "SettingsDataStore"
     }
 
     private val themeKey = stringPreferencesKey(THEME_KEY)
@@ -90,7 +94,7 @@ class SettingsDataStore(private val context: Context) {
 
     private fun Flow<Preferences>.catchException(): Flow<Preferences> = this.catch {
         if (it is IOException) {
-            it.printStackTrace()
+            Log.w(TAG, "DataStore read failed; using defaults for this emission", it)
             emit(emptyPreferences())
         } else {
             throw it
@@ -115,27 +119,21 @@ class SettingsDataStore(private val context: Context) {
         }
 
     suspend fun saveTheme(themeEntity: ThemeEntity) {
-        context.dataStore.edit {
-            it[themeKey] = themeEntity.name
-        }
+        context.dataStore.edit { it[themeKey] = themeEntity.name }
     }
 
     suspend fun saveUseDynamicColors(useDynamicColors: Boolean) {
         context.dataStore.edit {
-            it[useDynamicColorsKey] = if(isDynamicColorsAvailable()) useDynamicColors else false
+            it[useDynamicColorsKey] = if (isDynamicColorsAvailable()) useDynamicColors else false
         }
     }
 
     suspend fun saveUseBlackColorForDarkTheme(useBlackColorForDarkTheme: Boolean) {
-        context.dataStore.edit {
-            it[useBlackColorForDarkThemeKey] = useBlackColorForDarkTheme
-        }
+        context.dataStore.edit { it[useBlackColorForDarkThemeKey] = useBlackColorForDarkTheme }
     }
 
     suspend fun saveUseFullScreen(useFullScreen: Boolean) {
-        context.dataStore.edit {
-            it[useFullScreenKey] = useFullScreen
-        }
+        context.dataStore.edit { it[useFullScreenKey] = useFullScreen }
     }
 
     // ---- Remote Settings ----
@@ -144,13 +142,10 @@ class SettingsDataStore(private val context: Context) {
         .catchException()
         .map { preferences ->
             RemoteSettings(
-                // ---- Mouse ----
                 mouseSpeed = preferences[mouseSpeedKey] ?: DEFAULT_MOUSE_SPEED,
                 mouseScrollSpeed = preferences[mouseScrollSpeedKey] ?: DEFAULT_MOUSE_SCROLL_SPEED,
                 shouldInvertMouseScrollingDirection = preferences[invertMouseScrollingDirectionKey] ?: DEFAULT_SHOULD_INVERT_MOUSE_SCROLLING_DIRECTION,
                 useGyroscope = preferences[useGyroscopeKey] ?: DEFAULT_USE_GYROSCOPE,
-
-                // ---- Keyboard ----
                 keyboardLanguage = try {
                     KeyboardLanguage.valueOf(preferences[keyboardLanguageKey] ?: DEFAULT_KEYBOARD_LANGUAGE.name)
                 } catch (_: IllegalArgumentException) {
@@ -159,8 +154,6 @@ class SettingsDataStore(private val context: Context) {
                 mustClearInputField = preferences[mustClearInputFieldKey] ?: DEFAULT_MUST_CLEAR_INPUT_FIELD,
                 useAdvancedKeyboard = preferences[useAdvancedKeyboardKey] ?: DEFAULT_USE_ADVANCED_KEYBOARD,
                 useAdvancedKeyboardIntegrated = preferences[useAdvancedKeyboardIntegratedKey] ?: DEFAULT_USE_ADVANCED_KEYBOARD_INTEGRATED,
-
-                // ---- Remote ----
                 remoteNavigationEntity = try {
                     RemoteNavigationEntity.valueOf(preferences[remoteNavigationKey] ?: DEFAULT_REMOTE_NAVIGATION.name)
                 } catch (_: IllegalArgumentException) {
@@ -185,107 +178,88 @@ class SettingsDataStore(private val context: Context) {
     // ---- Mouse ----
 
     suspend fun saveMouseSpeed(mouseSpeed: Float) {
-        context.dataStore.edit {
-            it[mouseSpeedKey] = mouseSpeed
-        }
+        context.dataStore.edit { it[mouseSpeedKey] = mouseSpeed }
     }
 
     suspend fun saveMouseScrollSpeed(scrollSpeed: Float) {
-        context.dataStore.edit {
-            it[mouseScrollSpeedKey] = scrollSpeed
-        }
+        context.dataStore.edit { it[mouseScrollSpeedKey] = scrollSpeed }
     }
 
     suspend fun saveInvertMouseScrollingDirection(invertScrollingDirection: Boolean) {
-        context.dataStore.edit {
-            it[invertMouseScrollingDirectionKey] = invertScrollingDirection
-        }
+        context.dataStore.edit { it[invertMouseScrollingDirectionKey] = invertScrollingDirection }
     }
 
     suspend fun saveUseGyroscope(useGyroscope: Boolean) {
-        context.dataStore.edit {
-            it[useGyroscopeKey] = useGyroscope
-        }
+        context.dataStore.edit { it[useGyroscopeKey] = useGyroscope }
     }
 
     // ---- Keyboard ----
 
     suspend fun saveKeyboardLanguage(language: KeyboardLanguage) {
-        context.dataStore.edit {
-            it[keyboardLanguageKey] = language.name
-        }
+        context.dataStore.edit { it[keyboardLanguageKey] = language.name }
     }
 
     suspend fun saveMustClearInputField(mustClearInputField: Boolean) {
-        context.dataStore.edit {
-            it[mustClearInputFieldKey] = mustClearInputField
-        }
+        context.dataStore.edit { it[mustClearInputFieldKey] = mustClearInputField }
     }
 
     suspend fun saveUseAdvancedKeyboard(useAdvancedKeyboard: Boolean) {
-        context.dataStore.edit {
-            it[useAdvancedKeyboardKey] = useAdvancedKeyboard
-        }
+        context.dataStore.edit { it[useAdvancedKeyboardKey] = useAdvancedKeyboard }
     }
 
     suspend fun saveUseAdvancedKeyboardIntegrated(useAdvancedKeyboardIntegrated: Boolean) {
-        context.dataStore.edit {
-            it[useAdvancedKeyboardIntegratedKey] = useAdvancedKeyboardIntegrated
-        }
+        context.dataStore.edit { it[useAdvancedKeyboardIntegratedKey] = useAdvancedKeyboardIntegrated }
     }
 
     // ---- Remote ----
 
     suspend fun saveUseMinimalistRemote(useAdvancedKeyboard: Boolean) {
-        context.dataStore.edit {
-            it[useMinimalistRemoteKey] = useAdvancedKeyboard
-        }
+        context.dataStore.edit { it[useMinimalistRemoteKey] = useAdvancedKeyboard }
     }
 
     suspend fun saveRemoteNavigation(remoteNavigationEntity: RemoteNavigationEntity) {
-        context.dataStore.edit {
-            it[remoteNavigationKey] = remoteNavigationEntity.name
-        }
+        context.dataStore.edit { it[remoteNavigationKey] = remoteNavigationEntity.name }
     }
 
     suspend fun saveUseEnterForSelection(useEnterForSelection: Boolean) {
-        context.dataStore.edit {
-            it[useEnterForSelectionKey] = useEnterForSelection
-        }
+        context.dataStore.edit { it[useEnterForSelectionKey] = useEnterForSelection }
     }
 
     suspend fun saveUseMouseNavigationByDefault(useMouseNavigationByDefault: Boolean) {
-        context.dataStore.edit {
-            it[useMouseNavigationByDefaultKey] = useMouseNavigationByDefault
-        }
+        context.dataStore.edit { it[useMouseNavigationByDefaultKey] = useMouseNavigationByDefault }
     }
 
     suspend fun saveVolumePhysicalButtonActionUp(volumePhysicalButtonAction: VolumePhysicalButtonAction) {
-        context.dataStore.edit {
-            it[volumePhysicalButtonActionUpKey] = volumePhysicalButtonAction.name
-        }
+        context.dataStore.edit { it[volumePhysicalButtonActionUpKey] = volumePhysicalButtonAction.name }
     }
 
     suspend fun saveVolumePhysicalButtonActionDown(volumePhysicalButtonAction: VolumePhysicalButtonAction) {
-        context.dataStore.edit {
-            it[volumePhysicalButtonActionDownKey] = volumePhysicalButtonAction.name
-        }
+        context.dataStore.edit { it[volumePhysicalButtonActionDownKey] = volumePhysicalButtonAction.name }
     }
 
     // ---- Favorite Devices ----
 
     val favoriteDevicesFlow: Flow<List<String>> = context.dataStore.data
         .catchException()
-        .map {
-            val jsonString: String? = it[favoriteDevicesKey]
-            if(jsonString == null) emptyList() else Json.decodeFromString(jsonString)
+        .map { preferences ->
+            val jsonString = preferences[favoriteDevicesKey] ?: return@map emptyList()
+            try {
+                Json.decodeFromString<List<String>>(jsonString)
+                    .filter(::isMacAddress)
+                    .distinct()
+            } catch (exception: SerializationException) {
+                Log.w(TAG, "Ignoring malformed favorite-device preference")
+                emptyList()
+            }
         }
 
     suspend fun saveFavoriteDevices(macAddresses: List<String>) {
-        val jsonString = Json.encodeToString(macAddresses)
-        context.dataStore.edit {
-            it[favoriteDevicesKey] = jsonString
-        }
+        val normalizedAddresses = macAddresses
+            .filter(::isMacAddress)
+            .map { it.uppercase() }
+            .distinct()
+        val jsonString = Json.encodeToString(normalizedAddresses)
+        context.dataStore.edit { it[favoriteDevicesKey] = jsonString }
     }
 
     // ---- Auto Connect ----
@@ -294,13 +268,16 @@ class SettingsDataStore(private val context: Context) {
         context.dataStore.data
             .catchException()
             .map { preferences ->
-                preferences[autoConnectDeviceAddressKey] ?: ""
+                preferences[autoConnectDeviceAddressKey]
+                    ?.takeIf(::isMacAddress)
+                    ?.uppercase()
+                    ?: ""
             }
     }
 
     suspend fun saveAutoConnectDeviceAddress(macAddress: String) {
         context.dataStore.edit {
-            it[autoConnectDeviceAddressKey] = macAddress
+            it[autoConnectDeviceAddressKey] = if (isMacAddress(macAddress)) macAddress.uppercase() else ""
         }
     }
 
@@ -309,28 +286,20 @@ class SettingsDataStore(private val context: Context) {
     val showRemoteButtonsInNotificationFlow: Flow<Boolean> by lazy {
         context.dataStore.data
             .catchException()
-            .map { preferences ->
-                preferences[showRemoteButtonsInNotificationKey] == true
-            }
+            .map { preferences -> preferences[showRemoteButtonsInNotificationKey] == true }
     }
 
     suspend fun saveShowRemoteButtonsInNotification(show: Boolean) {
-        context.dataStore.edit {
-            it[showRemoteButtonsInNotificationKey] = show
-        }
+        context.dataStore.edit { it[showRemoteButtonsInNotificationKey] = show }
     }
 
     val hideBluetoothActivationButtonFlow: Flow<Boolean> by lazy {
         context.dataStore.data
             .catchException()
-            .map { preferences ->
-                preferences[hideBluetoothActivationButtonKey] == true
-            }
+            .map { preferences -> preferences[hideBluetoothActivationButtonKey] == true }
     }
 
     suspend fun saveHideBluetoothActivationButton(hide: Boolean) {
-        context.dataStore.edit {
-            it[hideBluetoothActivationButtonKey] = hide
-        }
+        context.dataStore.edit { it[hideBluetoothActivationButtonKey] = hide }
     }
 }
