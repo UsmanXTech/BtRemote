@@ -4,11 +4,13 @@ import android.view.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atharok.btremote.presentation.viewmodel.GyroscopeSensorViewModel
 import org.koin.androidx.compose.koinViewModel
 
 private const val OFFSET = 10
+private const val MIN_MOUSE_DELTA = 0.05f
 
 @Composable
 fun MouseGyroscope(
@@ -16,6 +18,9 @@ fun MouseGyroscope(
     onMousePositionChange: (Float, Float) -> Unit,
     gyroscopeSensorViewModel: GyroscopeSensorViewModel = koinViewModel()
 ) {
+    val currentMouseSpeed = rememberUpdatedState(mouseSpeed)
+    val currentMousePositionCallback = rememberUpdatedState(onMousePositionChange)
+
     DisposableEffect(Unit) {
         gyroscopeSensorViewModel.startListening()
         onDispose {
@@ -30,9 +35,11 @@ fun MouseGyroscope(
         val (dx, dy) = calculateMouseDirection(
             x, y, z,
             gyroscopeSensorViewModel.getDisplayRotation(),
-            mouseSpeed
+            currentMouseSpeed.value
         )
-        onMousePositionChange(dx, dy)
+        if (kotlin.math.abs(dx) >= MIN_MOUSE_DELTA || kotlin.math.abs(dy) >= MIN_MOUSE_DELTA) {
+            currentMousePositionCallback.value(dx, dy)
+        }
     }
 }
 

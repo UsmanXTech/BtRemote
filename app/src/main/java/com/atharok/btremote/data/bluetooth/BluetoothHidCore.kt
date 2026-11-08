@@ -16,7 +16,12 @@ import com.atharok.btremote.common.utils.isMacAddress
 import com.atharok.btremote.domain.entities.DeviceHidConnectionState
 import com.atharok.btremote.domain.entities.remoteInput.RemoteButtonProperties
 import com.atharok.btremote.domain.entities.remoteInput.keyboard.virtualKeyboard.VirtualKeyboardLayout
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
@@ -28,6 +33,8 @@ class BluetoothHidCore(
 ) {
     private var bluetoothHidDevice: BluetoothHidDevice? = null
     private var profileProxyRequested = false
+    private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var connectionTimeoutJob: Job? = null
 
     private val _isBluetoothServiceRunning: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isBluetoothServiceRunning: StateFlow<Boolean> = _isBluetoothServiceRunning
@@ -51,6 +58,7 @@ class BluetoothHidCore(
     }
 
     fun stopBluetoothHidProfile() {
+        cancelConnectionTimeout()
         bluetoothHidDevice?.let { hidDevice ->
             if (checkBluetoothConnectPermission(context)) {
                 disconnectDevice(hidDevice)
@@ -88,6 +96,7 @@ class BluetoothHidCore(
             bluetoothHidDevice = null
             profileProxyRequested = false
             bluetoothDevice = null
+            cancelConnectionTimeout()
             _isBluetoothHidProfileRegistered.value = false
             _isBluetoothServiceRunning.value = false
             _deviceHidConnectionState.value = DeviceHidConnectionState()
@@ -110,6 +119,10 @@ class BluetoothHidCore(
             super.onConnectionStateChanged(device, state)
             if (checkBluetoothConnectPermission(context)) {
                 _deviceHidConnectionState.value = DeviceHidConnectionState(state, device?.name ?: "")
+                if (state == BluetoothProfile.STATE_CONNECTED || state == BluetoothProfile.STATE_DISCONNECTED) {
+                    cancelConnectionTimeout()
+                    if (state == BluetoothProfile.STATE_DISCONNECTED) bluetoothDevice = null
+                }
             }
         }
     }
@@ -119,12 +132,13 @@ class BluetoothHidCore(
     private var bluetoothDevice: BluetoothDevice? = null
 
     fun connectDevice(deviceAddress: String): Boolean {
-        if (checkBluetoothConnectPermission(context)) {
-            bluetoothHidDevice?.let {
-                return connectDevice(it, deviceAddress)
-            }
+        if (!checkBluetoothConnectPermission(context)) return false
+        val hidDevice = bluetoothHidDevice ?: return false
+        val currentState = _deviceHidConnectionState.value.state
+        if (currentState == BluetoothProfile.STATE_CONNECTING || currentState == BluetoothProfile.STATE_CONNECTED) {
+            return false
         }
-        return false
+        return connectDevice(hidDevice, deviceAddress)
     }
 
     fun disconnectDevice(): Boolean {
@@ -138,8 +152,43 @@ class BluetoothHidCore(
 
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
     private fun connectDevice(hidDevice: BluetoothHidDevice, deviceAddress: String): Boolean {
-        bluetoothDevice = adapter?.getRemoteDevice(deviceAddress.uppercase(Locale.getDefault()))
-        return bluetoothDevice?.let { hidDevice.connect(it) } ?: false
+        val device = try {
+            adapter?.getRemoteDevice(deviceAddress.uppercase(Locale.ROOT))
+        } catch (_: IllegalArgumentException) {
+            null
+        } ?: return false
+
+        bluetoothDevice = device
+        _deviceHidConnectionState.value = DeviceHidConnectionState(
+            BluetoothProfile.STATE_CONNECTING,
+            device.name ?: ""
+        )
+
+        val accepted = hidDevice.connect(device)
+        if (!accepted) {
+            bluetoothDevice = null
+            _deviceHidConnectionState.value = DeviceHidConnectionState()
+            return false
+        }
+
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob = connectionScope.launch {
+            delay(CONNECTION_TIMEOUT_MS)
+            if (_deviceHidConnectionState.value.state == BluetoothProfile.STATE_CONNECTING) {
+                bluetoothHidDevice?.let { hidDevice ->
+                    if (checkBluetoothConnectPermission(context)) disconnectDevice(hidDevice)
+                }
+                bluetoothDevice = null
+                _deviceHidConnectionState.value = DeviceHidConnectionState()
+            }
+            connectionTimeoutJob = null
+        }
+        return true
+    }
+
+    private fun cancelConnectionTimeout() {
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob = null
     }
 
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
@@ -191,6 +240,10 @@ class BluetoothHidCore(
         }
 
         return success
+    }
+
+    private companion object {
+        const val CONNECTION_TIMEOUT_MS = 15_000L
     }
 
     suspend fun sendTextReport(
