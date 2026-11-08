@@ -18,20 +18,25 @@ class BluetoothScanner(
     private val adapter: BluetoothAdapter?
 ) {
     val scannedDevices = mutableStateListOf<DeviceEntity>()
+    private var receiverRegistered = false
 
     // ---- BroadcastReceiver ----
 
     private val bluetoothScannerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            when(intent?.action) {
+            when (intent?.action) {
                 BluetoothDevice.ACTION_FOUND -> {
-                    intent.parcelable(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)?.let { device: BluetoothDevice ->
-                        if(checkBluetoothConnectPermission(this@BluetoothScanner.context)) {
-                            if(!scannedDevices.any { it.macAddress == device.address }) {
+                    intent.parcelable(
+                        BluetoothDevice.EXTRA_DEVICE,
+                        BluetoothDevice::class.java
+                    )?.let { device: BluetoothDevice ->
+                        if (checkBluetoothConnectPermission(this@BluetoothScanner.context)) {
+                            val address = device.address
+                            if (scannedDevices.none { it.macAddress == address }) {
                                 scannedDevices.add(
                                     DeviceEntity(
-                                        name = device.name ?: "null",
-                                        macAddress = device.address ?: "null",
+                                        name = device.name ?: "Unknown device",
+                                        macAddress = address,
                                         category = device.bluetoothClass.majorDeviceClass
                                     )
                                 )
@@ -44,27 +49,38 @@ class BluetoothScanner(
     }
 
     fun registerBluetoothScannerReceiver() {
+        if (receiverRegistered) return
+
         val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
         context.registerReceiver(bluetoothScannerReceiver, filter)
+        receiverRegistered = true
     }
 
     fun unregisterBluetoothScannerReceiver() {
+        if (!receiverRegistered) return
+
         try {
             context.unregisterReceiver(bluetoothScannerReceiver)
-        } catch (e: java.lang.RuntimeException) {
-            Log.e("unregisterReceiver()", "Receiver already unregister: ${e.message ?: e.toString()}")
+        } catch (e: IllegalArgumentException) {
+            Log.w("BluetoothScanner", "Receiver was already unregistered", e)
+        } finally {
+            receiverRegistered = false
         }
     }
 
     fun startDiscoveryDevices(): Boolean {
-        return if (checkBluetoothScanPermission(context)) {
-            adapter?.startDiscovery() == true
-        } else false
+        if (!checkBluetoothScanPermission(context)) return false
+
+        val started = adapter?.startDiscovery() == true
+        if (started) scannedDevices.clear()
+        return started
     }
 
     fun cancelDiscoveryDevices(): Boolean {
         return if (checkBluetoothScanPermission(context)) {
             adapter?.cancelDiscovery() == true
-        } else false
+        } else {
+            false
+        }
     }
 }
