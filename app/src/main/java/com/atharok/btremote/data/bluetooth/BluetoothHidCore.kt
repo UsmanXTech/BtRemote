@@ -170,9 +170,10 @@ class BluetoothHidCore(
                 return
             }
 
+            val callbackDevice = device ?: return
             val currentTarget = bluetoothDevice
             val callbackAddress = safeBluetoothCall("read callback device address", null as String?) {
-                device?.address
+                callbackDevice.address
             }
             val targetAddress = safeBluetoothCall("read active target address", null as String?) {
                 currentTarget?.address
@@ -183,22 +184,22 @@ class BluetoothHidCore(
             if (currentTarget == null || callbackAddress == null || targetAddress == null ||
                 !callbackAddress.equals(targetAddress, ignoreCase = true)
             ) {
-                if (state == BluetoothProfile.STATE_CONNECTED && device != null) {
+                if (state == BluetoothProfile.STATE_CONNECTED) {
                     safeBluetoothCall("disconnect stale HID connection", false) {
-                        bluetoothHidDevice?.disconnect(device)
+                        bluetoothHidDevice?.disconnect(callbackDevice)
                     }
                 }
                 return
             }
 
             val deviceName = safeBluetoothCall("read HID device name", "") {
-                device.name ?: ""
+                callbackDevice.name ?: ""
             }
             _deviceHidConnectionState.value = DeviceHidConnectionState(state, deviceName)
 
             if (state == BluetoothProfile.STATE_CONNECTED) {
                 cancelConnectionTimeout()
-                bluetoothDevice = device
+                bluetoothDevice = callbackDevice
             } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
                 cancelConnectionTimeout()
                 bluetoothDevice = null
