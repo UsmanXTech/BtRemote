@@ -69,7 +69,8 @@ class RemoteViewModel(
 
     private data class LiveTypingUpdate(
         val text: String?,
-        val keyboardLayout: VirtualKeyboardLayout? = null
+        val keyboardLayout: VirtualKeyboardLayout? = null,
+        val sendEnter: Boolean = false
     )
 
     private val liveTypingQueue = Channel<LiveTypingUpdate>(Channel.UNLIMITED)
@@ -79,7 +80,11 @@ class RemoteViewModel(
         for (update in liveTypingQueue) {
             val newText = update.text
             if (newText == null) {
-                lastSentText = ""
+                if (update.sendEnter) {
+                    sendKeyboardKey(RemoteButtonProperties.KeyboardEnterButton.input)
+                } else {
+                    lastSentText = ""
+                }
                 continue
             }
 
@@ -114,6 +119,10 @@ class RemoteViewModel(
 
     fun resetLiveTyping() {
         liveTypingQueue.trySend(LiveTypingUpdate(null))
+    }
+
+    fun sendLiveTypingEnter() {
+        liveTypingQueue.trySend(LiveTypingUpdate(null, sendEnter = true))
     }
 
     private suspend fun sendKeyboardKey(bytes: ByteArray) {
