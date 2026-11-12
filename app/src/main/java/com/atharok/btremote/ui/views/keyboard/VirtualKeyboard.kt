@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -133,6 +134,7 @@ private fun StatelessKeyboardView(
         onTextChange(value)
         if (liveTypingEnabled) sendLiveTextUpdate(value)
     }
+    val latestUpdateText by rememberUpdatedState<(String) -> Unit>(::updateText)
 
     val microphonePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -157,7 +159,7 @@ private fun StatelessKeyboardView(
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()
                     ?: return
-                updateText(recognizedText)
+                latestUpdateText(recognizedText)
             }
 
             override fun onReadyForSpeech(params: Bundle?) {}
@@ -196,7 +198,7 @@ private fun StatelessKeyboardView(
         ) {
             OutlinedTextField(
                 value = text,
-                onValueChange = onTextChange,
+                onValueChange = ::updateText,
                 modifier = Modifier
                     .weight(4f)
                     .focusRequester(focusRequester),
