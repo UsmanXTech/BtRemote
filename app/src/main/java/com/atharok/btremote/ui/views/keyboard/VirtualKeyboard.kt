@@ -115,7 +115,8 @@ private fun StatelessKeyboardView(
 ) {
     val context = LocalContext.current
     var liveTypingEnabled by rememberSaveable { mutableStateOf(false) }
-    var isListening by rememberSaveable { mutableStateOf(false) }
+    var isListening by remember { mutableStateOf(false) }
+    var voiceBaseText by remember { mutableStateOf(text) }
     val speechRecognizer = remember(context) {
         if (SpeechRecognizer.isRecognitionAvailable(context)) {
             SpeechRecognizer.createSpeechRecognizer(context)
@@ -145,6 +146,22 @@ private fun StatelessKeyboardView(
         }
     }
 
+    fun prepareVoiceSession() {
+        voiceBaseText = text
+        enableLiveTyping()
+    }
+
+    fun publishVoiceResult(results: Bundle?, isFinal: Boolean) {
+        val recognizedText = results
+            ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            ?.firstOrNull()
+            ?: return
+        val separator = if (voiceBaseText.isNotEmpty() && !voiceBaseText.last().isWhitespace()) " " else ""
+        val completeText = voiceBaseText + separator + recognizedText
+        latestUpdateText(completeText)
+        if (isFinal) voiceBaseText = completeText
+    }
+
     val latestUpdateText by rememberUpdatedState<(String) -> Unit>(::updateText)
 
     val microphonePermissionLauncher = rememberLauncherForActivityResult(
@@ -152,7 +169,7 @@ private fun StatelessKeyboardView(
     ) { granted ->
         if (granted) {
             try {
-                enableLiveTyping()
+                prepareVoiceSession()
                 speechRecognizer?.startListening(speechIntent)
                 isListening = speechRecognizer != null
             } catch (exception: RuntimeException) {
@@ -166,14 +183,6 @@ private fun StatelessKeyboardView(
 
     DisposableEffect(speechRecognizer) {
         speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            private fun publishResult(results: Bundle?) {
-                val recognizedText = results
-                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    ?.firstOrNull()
-                    ?: return
-                latestUpdateText(recognizedText)
-            }
-
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
@@ -183,11 +192,11 @@ private fun StatelessKeyboardView(
                 isListening = false
             }
             override fun onResults(results: Bundle?) {
-                publishResult(results)
+                publishVoiceResult(results, isFinal = true)
                 isListening = false
             }
             override fun onPartialResults(partialResults: Bundle?) {
-                publishResult(partialResults)
+                publishVoiceResult(partialResults, isFinal = false)
             }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
@@ -288,7 +297,7 @@ private fun StatelessKeyboardView(
                         ) == PackageManager.PERMISSION_GRANTED
                     ) {
                         try {
-                            enableLiveTyping()
+                            prepareVoiceSession()
                             speechRecognizer.startListening(speechIntent)
                             isListening = true
                         } catch (exception: RuntimeException) {
