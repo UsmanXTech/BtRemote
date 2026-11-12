@@ -134,6 +134,14 @@ private fun StatelessKeyboardView(
         onTextChange(value)
         if (liveTypingEnabled) sendLiveTextUpdate(value)
     }
+
+    fun enableLiveTyping() {
+        if (!liveTypingEnabled) {
+            liveTypingEnabled = true
+            if (text.isNotEmpty()) sendLiveTextUpdate(text)
+        }
+    }
+
     val latestUpdateText by rememberUpdatedState<(String) -> Unit>(::updateText)
 
     val microphonePermissionLauncher = rememberLauncherForActivityResult(
@@ -141,6 +149,7 @@ private fun StatelessKeyboardView(
     ) { granted ->
         if (granted) {
             try {
+                enableLiveTyping()
                 speechRecognizer?.startListening(speechIntent)
                 isListening = speechRecognizer != null
             } catch (exception: RuntimeException) {
@@ -276,6 +285,7 @@ private fun StatelessKeyboardView(
                         ) == PackageManager.PERMISSION_GRANTED
                     ) {
                         try {
+                            enableLiveTyping()
                             speechRecognizer.startListening(speechIntent)
                             isListening = true
                         } catch (exception: RuntimeException) {
