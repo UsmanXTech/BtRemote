@@ -170,27 +170,36 @@ class BluetoothHidCore(
                 return
             }
 
-            // A connection callback can arrive after the connection timeout. Do not
-            // resurrect a timed-out connection as active; ask Android to disconnect it.
+            val callbackDevice = device ?: return
             val currentTarget = bluetoothDevice
-            if (state == BluetoothProfile.STATE_CONNECTED &&
-                device != null &&
-                currentTarget == null
+            val callbackAddress = safeBluetoothCall("read callback device address", null as String?) {
+                callbackDevice.address
+            }
+            val targetAddress = safeBluetoothCall("read active target address", null as String?) {
+                currentTarget?.address
+            }
+
+            // HID callbacks can be delayed and arrive out of order. Accept state changes
+            // only for the device belonging to the currently active connection attempt.
+            if (currentTarget == null || callbackAddress == null || targetAddress == null ||
+                !callbackAddress.equals(targetAddress, ignoreCase = true)
             ) {
-                safeBluetoothCall("disconnect late HID connection", false) {
-                    bluetoothHidDevice?.disconnect(device)
+                if (state == BluetoothProfile.STATE_CONNECTED) {
+                    safeBluetoothCall("disconnect stale HID connection", false) {
+                        bluetoothHidDevice?.disconnect(callbackDevice)
+                    }
                 }
                 return
             }
 
             val deviceName = safeBluetoothCall("read HID device name", "") {
-                device?.name ?: ""
+                callbackDevice.name ?: ""
             }
             _deviceHidConnectionState.value = DeviceHidConnectionState(state, deviceName)
 
             if (state == BluetoothProfile.STATE_CONNECTED) {
                 cancelConnectionTimeout()
-                if (device != null) bluetoothDevice = device
+                bluetoothDevice = callbackDevice
             } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
                 cancelConnectionTimeout()
                 bluetoothDevice = null
@@ -217,12 +226,15 @@ class BluetoothHidCore(
     fun disconnectDevice(): Boolean {
         if (!checkBluetoothConnectPermission(context)) return false
         val hidDevice = bluetoothHidDevice ?: return false
-        ++connectionAttemptId
-        cancelConnectionTimeout()
+
+        // Do not invalidate the connection timeout until Android accepts the disconnect.
+        // Otherwise a rejected disconnect can strand the state in CONNECTING forever.
         val disconnected = safeBluetoothCall("disconnect HID device", false) {
             disconnectDevice(hidDevice)
         }
         if (disconnected) {
+            ++connectionAttemptId
+            cancelConnectionTimeout()
             bluetoothDevice = null
             _deviceHidConnectionState.value = DeviceHidConnectionState()
         }
@@ -280,14 +292,15 @@ class BluetoothHidCore(
     private fun disconnectDevice(hidDevice: BluetoothHidDevice): Boolean {
         val device = bluetoothDevice ?: return false
 
-        // Preserve the existing Pixel 3a workaround: the second disconnect result
-        // is used because some devices need a repeated request.
-        safeBluetoothCall("first HID disconnect request", false) {
+        // Some devices need a repeated disconnect request. Treat either accepted request
+        // as success; the second call may legitimately return false after the first worked.
+        val firstAccepted = safeBluetoothCall("first HID disconnect request", false) {
             hidDevice.disconnect(device)
         }
-        return safeBluetoothCall("second HID disconnect request", false) {
+        val secondAccepted = safeBluetoothCall("second HID disconnect request", false) {
             hidDevice.disconnect(device)
         }
+        return firstAccepted || secondAccepted
     }
 
     // ---- Send Report ----
