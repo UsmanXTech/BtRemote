@@ -61,6 +61,7 @@ fun VirtualKeyboardModalBottomSheet(
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     sendTextReport: (String, Boolean) -> Unit,
     sendLiveTextUpdate: (String) -> Unit,
+    sendLiveTypingEnter: () -> Unit,
     resetLiveTyping: () -> Unit,
     onShowKeyboardBottomSheetChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
@@ -87,6 +88,7 @@ fun VirtualKeyboardModalBottomSheet(
             sendKeyboardKeyReport = sendKeyboardKeyReport,
             sendTextReport = sendTextReport,
             sendLiveTextUpdate = sendLiveTextUpdate,
+            sendLiveTypingEnter = sendLiveTypingEnter,
             resetLiveTyping = resetLiveTyping,
             keyboardLanguage = keyboardLanguage,
             modifier = Modifier
@@ -106,6 +108,7 @@ private fun StatelessKeyboardView(
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     sendTextReport: (String, Boolean) -> Unit,
     sendLiveTextUpdate: (String) -> Unit,
+    sendLiveTypingEnter: () -> Unit,
     resetLiveTyping: () -> Unit,
     keyboardLanguage: KeyboardLanguage,
     modifier: Modifier = Modifier
@@ -217,7 +220,7 @@ private fun StatelessKeyboardView(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         if (liveTypingEnabled) {
-                            sendTextReport("", true)
+                            sendLiveTypingEnter()
                         } else {
                             sendTextReport(text, true)
                         }
@@ -232,7 +235,7 @@ private fun StatelessKeyboardView(
             BasicIconButton(
                 onClick = {
                     if (liveTypingEnabled) {
-                        sendTextReport("", true)
+                        sendLiveTypingEnter()
                     } else {
                         sendTextReport(text, false)
                     }
