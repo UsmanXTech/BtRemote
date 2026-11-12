@@ -187,6 +187,7 @@ fun RemoteScreen(
                                 getKeyboardLayout(remoteSettings.keyboardLanguage)
                             )
                         },
+                        sendLiveTypingEnter = remoteViewModel::sendLiveTypingEnter,
                         resetLiveTyping = remoteViewModel::resetLiveTyping,
                         onShowKeyboardChanged = { isKeyboardVisible = it }
                     )
@@ -490,6 +491,7 @@ private fun KeyboardModalBottomSheet(
     sendKeyboardKeyReport: (ByteArray) -> Unit,
     sendTextReport: (String, VirtualKeyboardLayout, Boolean) -> Unit,
     sendLiveTextUpdate: (String) -> Unit,
+    sendLiveTypingEnter: () -> Unit,
     resetLiveTyping: () -> Unit,
     onShowKeyboardChanged: (Boolean) -> Unit,
 ) {
@@ -516,6 +518,7 @@ private fun KeyboardModalBottomSheet(
                 sendTextReport(text, virtualKeyboardLayout, shouldSendEnter)
             },
             sendLiveTextUpdate = sendLiveTextUpdate,
+            sendLiveTypingEnter = sendLiveTypingEnter,
             resetLiveTyping = resetLiveTyping,
             onShowKeyboardBottomSheetChanged = onShowKeyboardChanged
         )
