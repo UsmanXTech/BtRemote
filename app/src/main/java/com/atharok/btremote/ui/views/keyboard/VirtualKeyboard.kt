@@ -138,6 +138,7 @@ private fun StatelessKeyboardView(
         onTextChange(value)
         if (liveTypingEnabled) sendLiveTextUpdate(value)
     }
+    val latestUpdateText by rememberUpdatedState<(String) -> Unit>(::updateText)
 
     fun enableLiveTyping() {
         if (!liveTypingEnabled) {
@@ -161,8 +162,6 @@ private fun StatelessKeyboardView(
         latestUpdateText(completeText)
         if (isFinal) voiceBaseText = completeText
     }
-
-    val latestUpdateText by rememberUpdatedState<(String) -> Unit>(::updateText)
 
     val microphonePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
