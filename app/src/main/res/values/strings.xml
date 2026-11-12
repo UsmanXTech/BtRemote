@@ -166,6 +166,11 @@
     <string name="keyboard_persian">Persian</string>
     <string name="keyboard_arabic">Arabic</string>
     <string name="send">Send</string>
+    <string name="live_typing">Live typing</string>
+    <string name="voice_typing">Voice</string>
+    <string name="stop_voice_typing">Stop</string>
+    <string name="voice_recognition_unavailable">Speech recognition is unavailable on this device.</string>
+    <string name="microphone_permission_denied">Microphone permission is required for voice typing.</string>
     <string name="enter">Enter</string>
     <string name="escape">Esc</string>
     <string name="delete">Delete</string>
