@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -141,6 +143,20 @@ private fun StatelessKeyboardView(
         if (liveTypingEnabled) sendLiveTextUpdate(value)
     }
     val latestUpdateText by rememberUpdatedState<(String) -> Unit>(::updateText)
+    val latestSpeechIntent by rememberUpdatedState(speechIntent)
+    val speechRestartHandler = remember { Handler(Looper.getMainLooper()) }
+    val restartSpeechRecognition = remember(speechRecognizer) {
+        Runnable {
+            if (isListening) {
+                try {
+                    speechRecognizer?.startListening(latestSpeechIntent)
+                } catch (exception: RuntimeException) {
+                    isListening = false
+                    Toast.makeText(context, R.string.voice_recognition_unavailable, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     fun enableLiveTyping() {
         if (!liveTypingEnabled) {
@@ -190,11 +206,20 @@ private fun StatelessKeyboardView(
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
-                isListening = false
+                if (isListening &&
+                    (error == SpeechRecognizer.ERROR_NO_MATCH ||
+                        error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
+                ) {
+                    speechRestartHandler.postDelayed(restartSpeechRecognition, VOICE_RESTART_DELAY_MS)
+                } else {
+                    isListening = false
+                }
             }
             override fun onResults(results: Bundle?) {
                 publishVoiceResult(results, isFinal = true)
-                isListening = false
+                if (isListening) {
+                    speechRestartHandler.postDelayed(restartSpeechRecognition, VOICE_RESTART_DELAY_MS)
+                }
             }
             override fun onPartialResults(partialResults: Bundle?) {
                 publishVoiceResult(partialResults, isFinal = false)
@@ -202,6 +227,7 @@ private fun StatelessKeyboardView(
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
         onDispose {
+            speechRestartHandler.removeCallbacks(restartSpeechRecognition)
             speechRecognizer?.cancel()
             speechRecognizer?.destroy()
         }
@@ -288,8 +314,13 @@ private fun StatelessKeyboardView(
             Button(
                 onClick = {
                     if (isListening) {
-                        speechRecognizer?.stopListening()
                         isListening = false
+                        speechRestartHandler.removeCallbacks(restartSpeechRecognition)
+                        try {
+                            speechRecognizer?.stopListening()
+                        } catch (exception: RuntimeException) {
+                            speechRecognizer?.cancel()
+                        }
                     } else if (speechRecognizer == null) {
                         Toast.makeText(context, R.string.voice_recognition_unavailable, Toast.LENGTH_SHORT).show()
                     } else if (ContextCompat.checkSelfPermission(
@@ -433,3 +464,6 @@ private fun KeyboardLanguage.toSpeechLanguageTag(): String = when (this) {
     KeyboardLanguage.PERSIAN -> "fa-IR"
     KeyboardLanguage.ARABIC -> "ar-SA"
 }
+
+
+private const val VOICE_RESTART_DELAY_MS = 300L
