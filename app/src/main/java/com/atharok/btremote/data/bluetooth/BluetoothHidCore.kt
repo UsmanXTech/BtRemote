@@ -9,6 +9,7 @@ import android.bluetooth.BluetoothProfile.ServiceListener
 import android.content.Context
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import com.atharok.btremote.common.utils.DiagnosticLogger
 import com.atharok.btremote.common.utils.DELAY_BETWEEN_KEY_PRESSES_IN_MILLIS
 import com.atharok.btremote.common.utils.KEYBOARD_REPORT_ID
 import com.atharok.btremote.common.utils.REMOTE_INPUT_NONE
@@ -54,9 +55,14 @@ class BluetoothHidCore(
     // ---- HID Profile ----
 
     fun startBluetoothHidProfile(autoConnectDeviceAddress: String) {
+        DiagnosticLogger.info("bluetooth.hid_profile_start_requested")
         this.autoConnectDeviceAddress = autoConnectDeviceAddress
-        if (profileProxyRequested || adapter == null) return
+        if (profileProxyRequested || adapter == null) {
+            DiagnosticLogger.warn("bluetooth.hid_profile_start_skipped", "already_requested_or_adapter_missing")
+            return
+        }
         if (!checkBluetoothConnectPermission(context)) {
+            DiagnosticLogger.error("bluetooth.permission_missing", "connect_permission_required_for_hid_profile")
             _isBluetoothServiceRunning.value = false
             _isBluetoothHidProfileRegistered.value = false
             return
@@ -70,6 +76,7 @@ class BluetoothHidCore(
             Log.w(TAG, "Failed to request HID profile proxy", exception)
             false
         }
+        DiagnosticLogger.info("bluetooth.hid_profile_proxy_request_result", "accepted=$accepted")
         if (!accepted && generation == profileGeneration) {
             profileProxyRequested = false
             _isBluetoothServiceRunning.value = false
@@ -77,6 +84,7 @@ class BluetoothHidCore(
     }
 
     fun stopBluetoothHidProfile() {
+        DiagnosticLogger.info("bluetooth.hid_profile_stop_requested")
         ++profileGeneration
         ++connectionAttemptId
         cancelConnectionTimeout()
@@ -119,6 +127,7 @@ class BluetoothHidCore(
             }
 
             bluetoothHidDevice = hidDevice
+            DiagnosticLogger.info("bluetooth.hid_profile_connected")
             _isBluetoothServiceRunning.value = true
             if (!checkBluetoothConnectPermission(context)) {
                 _isBluetoothHidProfileRegistered.value = false
@@ -134,12 +143,14 @@ class BluetoothHidCore(
                     createHidCallback(generation)
                 )
             }
+            DiagnosticLogger.info("bluetooth.hid_app_registration_result", "registered=$registered")
             _isBluetoothHidProfileRegistered.value = registered
         }
 
         override fun onServiceDisconnected(profile: Int) {
             if (profile != BluetoothProfile.HID_DEVICE || generation != profileGeneration) return
 
+            DiagnosticLogger.warn("bluetooth.hid_profile_disconnected")
             bluetoothHidDevice = null
             profileProxyRequested = false
             bluetoothDevice = null
@@ -156,6 +167,7 @@ class BluetoothHidCore(
             super.onAppStatusChanged(pluggedDevice, registered)
             if (generation != profileGeneration || !profileProxyRequested) return
 
+            DiagnosticLogger.info("bluetooth.hid_app_status_changed", "registered=$registered")
             _isBluetoothHidProfileRegistered.value = registered
             if (registered && isMacAddress(autoConnectDeviceAddress)) {
                 connectDevice(autoConnectDeviceAddress)
@@ -195,6 +207,7 @@ class BluetoothHidCore(
             val deviceName = safeBluetoothCall("read HID device name", "") {
                 callbackDevice.name ?: ""
             }
+            DiagnosticLogger.info("bluetooth.hid_connection_state", "state=$state")
             _deviceHidConnectionState.value = DeviceHidConnectionState(state, deviceName)
 
             if (state == BluetoothProfile.STATE_CONNECTED) {
@@ -210,10 +223,20 @@ class BluetoothHidCore(
     // ---- Device Connection ----
 
     fun connectDevice(deviceAddress: String): Boolean {
-        if (!checkBluetoothConnectPermission(context)) return false
-        if (!isMacAddress(deviceAddress)) return false
+        DiagnosticLogger.info("bluetooth.connect_requested")
+        if (!checkBluetoothConnectPermission(context)) {
+            DiagnosticLogger.error("bluetooth.connect_rejected", "missing_connect_permission")
+            return false
+        }
+        if (!isMacAddress(deviceAddress)) {
+            DiagnosticLogger.warn("bluetooth.connect_rejected", "invalid_device_address")
+            return false
+        }
 
-        val hidDevice = bluetoothHidDevice ?: return false
+        val hidDevice = bluetoothHidDevice ?: run {
+            DiagnosticLogger.warn("bluetooth.connect_rejected", "hid_profile_unavailable")
+            return false
+        }
         val currentState = _deviceHidConnectionState.value.state
         if (currentState == BluetoothProfile.STATE_CONNECTING ||
             currentState == BluetoothProfile.STATE_CONNECTED
@@ -257,10 +280,12 @@ class BluetoothHidCore(
         )
 
         val attemptId = ++connectionAttemptId
+        DiagnosticLogger.info("bluetooth.connect_attempt_started")
         val accepted = safeBluetoothCall("connect HID device", false) {
             hidDevice.connect(device)
         }
         if (!accepted) {
+            DiagnosticLogger.error("bluetooth.connect_request_failed", "android_rejected_hid_connect")
             bluetoothDevice = null
             _deviceHidConnectionState.value = DeviceHidConnectionState()
             return false
@@ -272,6 +297,7 @@ class BluetoothHidCore(
             if (attemptId == connectionAttemptId &&
                 _deviceHidConnectionState.value.state == BluetoothProfile.STATE_CONNECTING
             ) {
+                DiagnosticLogger.error("bluetooth.connect_timeout", "timeout_ms=$CONNECTION_TIMEOUT_MS")
                 safeBluetoothCall("disconnect timed-out HID device", false) {
                     hidDevice.disconnect(device)
                 }
@@ -403,12 +429,15 @@ class BluetoothHidCore(
     ): T = try {
         call()
     } catch (exception: SecurityException) {
+        DiagnosticLogger.error("bluetooth.operation_security_failure", operation, exception)
         Log.w(TAG, "Bluetooth permission/security failure: $operation", exception)
         fallback
     } catch (exception: IllegalArgumentException) {
+        DiagnosticLogger.warn("bluetooth.operation_invalid_argument", operation, exception)
         Log.w(TAG, "Invalid Bluetooth argument: $operation", exception)
         fallback
     } catch (exception: IllegalStateException) {
+        DiagnosticLogger.error("bluetooth.stack_not_ready", operation, exception)
         Log.w(TAG, "Bluetooth stack is not ready: $operation", exception)
         fallback
     }

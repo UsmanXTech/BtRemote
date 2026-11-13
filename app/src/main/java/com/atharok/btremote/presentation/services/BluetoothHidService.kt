@@ -16,6 +16,7 @@ import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.glance.appwidget.updateAll
 import com.atharok.btremote.R
+import com.atharok.btremote.common.utils.DiagnosticLogger
 import com.atharok.btremote.common.utils.NOTIFICATION_CHANNEL_ID
 import com.atharok.btremote.common.utils.NOTIFICATION_ID
 import com.atharok.btremote.domain.usecases.BluetoothHidServiceUseCase
@@ -61,6 +62,7 @@ class BluetoothHidService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        DiagnosticLogger.info("service.hid_created")
         createNotificationChannel()
 
         connectionStateJob = serviceScope.launch {
@@ -94,6 +96,7 @@ class BluetoothHidService : Service() {
     }
 
     override fun onDestroy() {
+        DiagnosticLogger.info("service.hid_destroyed")
         connectionStateJob?.cancel()
         profileStartJob?.cancel()
         serviceScope.cancel()
@@ -109,6 +112,7 @@ class BluetoothHidService : Service() {
     override fun onBind(intent: Intent?): IBinder = Binder()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        DiagnosticLogger.info("service.hid_start_command", "start_id=$startId")
         if (!notificationChannelReady) {
             Log.e(TAG, "Cannot start HID service without a notification channel")
             stopSelf(startId)
@@ -130,6 +134,7 @@ class BluetoothHidService : Service() {
                 }
             }
         } catch (exception: RuntimeException) {
+            DiagnosticLogger.error("service.foreground_start_failed", "start_id=$startId", exception)
             Log.e(TAG, "Unable to start foreground Bluetooth service", exception)
             stopSelf(startId)
             return START_NOT_STICKY

@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
 import com.atharok.btremote.common.extensions.parcelable
+import com.atharok.btremote.common.utils.DiagnosticLogger
 import com.atharok.btremote.common.utils.checkBluetoothConnectPermission
 import com.atharok.btremote.common.utils.checkBluetoothScanPermission
 import com.atharok.btremote.domain.entities.DeviceEntity
@@ -59,8 +60,10 @@ class BluetoothScanner(
                 IntentFilter(BluetoothDevice.ACTION_FOUND)
             )
             receiverRegistered = true
+            DiagnosticLogger.info("bluetooth.discovery_receiver_registered")
             true
         } catch (exception: RuntimeException) {
+            DiagnosticLogger.error("bluetooth.discovery_receiver_registration_failed", "", exception)
             Log.w(TAG, "Unable to register Bluetooth discovery receiver", exception)
             receiverRegistered = false
             false
@@ -81,24 +84,40 @@ class BluetoothScanner(
     }
 
     fun startDiscoveryDevices(): Boolean {
-        if (!checkBluetoothScanPermission(context)) return false
+        if (!checkBluetoothScanPermission(context)) {
+            DiagnosticLogger.error("bluetooth.discovery_rejected", "missing_scan_permission")
+            return false
+        }
+        DiagnosticLogger.info("bluetooth.discovery_start_requested")
         val started = try {
             adapter?.startDiscovery() == true
         } catch (exception: SecurityException) {
+            DiagnosticLogger.error("bluetooth.discovery_start_security_failure", "", exception)
             Log.w(TAG, "Bluetooth scan permission revoked before discovery start", exception)
             false
         } catch (exception: IllegalStateException) {
+            DiagnosticLogger.error("bluetooth.discovery_adapter_not_ready", "", exception)
             Log.w(TAG, "Bluetooth adapter is not ready for discovery", exception)
             false
         }
-        if (started) _scannedDevices.value = emptyList()
+        if (started) {
+            _scannedDevices.value = emptyList()
+            DiagnosticLogger.info("bluetooth.discovery_started")
+        } else {
+            DiagnosticLogger.warn("bluetooth.discovery_start_failed")
+        }
         return started
     }
 
     fun cancelDiscoveryDevices(): Boolean {
-        if (!checkBluetoothScanPermission(context)) return false
+        if (!checkBluetoothScanPermission(context)) {
+            DiagnosticLogger.error("bluetooth.discovery_cancel_rejected", "missing_scan_permission")
+            return false
+        }
         return try {
-            adapter?.cancelDiscovery() == true
+            (adapter?.cancelDiscovery() == true).also { cancelled ->
+                DiagnosticLogger.info("bluetooth.discovery_cancel_result", "cancelled=$cancelled")
+            }
         } catch (exception: SecurityException) {
             Log.w(TAG, "Bluetooth scan permission revoked before discovery cancellation", exception)
             false
